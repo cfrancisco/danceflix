@@ -1,0 +1,308 @@
+{
+    "hubs": {
+        "base_frente_tras": {
+            "id": "base_frente_tras",
+            "title": "Base Frente e Trás",
+            "description": "Hub central - o coração da base do Zouk",
+            "icon": "🔄",
+            "color": "#3B82F6",
+            "difficulty": 5,
+            "videoIds": [
+                "base-1"
+            ],
+            "notes": "Todos os fluxos começam ou retornam aqui"
+        },
+        "base_lateral": {
+            "id": "base_lateral",
+            "title": "Base Lateral",
+            "description": "Deslocamento lateral mantendo a conexão",
+            "icon": "↔️",
+            "color": "#8B5CF6",
+            "difficulty": 5,
+            "videoIds": [
+                "base-2"
+            ],
+            "notes": "Perfeita para transições e mudanças de direção"
+        },
+        "abertura": {
+            "id": "abertura",
+            "title": "Abertura",
+            "description": "Saídas e desdobramentos da base",
+            "icon": "🌊",
+            "color": "#06B6D4",
+            "difficulty": 4,
+            "videoIds": [
+                "abertura-1",
+                "abertura-2",
+                "abertura-3",
+                "abertura-4"
+            ],
+            "notes": "Múltiplas opções para explorar o espaço"
+        },
+        "giros": {
+            "id": "giros",
+            "title": "Giros e Dinâmicas",
+            "description": "Movimentos rotativos e dinâmicos",
+            "icon": "🌀",
+            "color": "#EF4444",
+            "difficulty": 3,
+            "videoIds": [
+                "giro-1",
+                "giro-2",
+                "giro-3",
+                "giro-4",
+                "giro-5",
+                "giro-6",
+                "giro-7",
+                "giro-8",
+                "giro-9",
+                "giro-10",
+                "giro-11"
+            ],
+            "notes": "Requer boa conexão e timing"
+        },
+        "pendulos": {
+            "id": "pendulos",
+            "title": "Pêndulos",
+            "description": "Movimentos pendulares e flutuantes",
+            "icon": "🎪",
+            "color": "#F59E0B",
+            "difficulty": 2,
+            "videoIds": [
+                "pendulo-1",
+                "pendulo-2"
+            ],
+            "notes": "Explora a gravidade e o balanço"
+        },
+        "dama_costas": {
+            "id": "dama_costas",
+            "title": "Dama de Costas",
+            "description": "Posição com a dama voltada para trás",
+            "icon": "🔙",
+            "color": "#EC4899",
+            "difficulty": 1,
+            "videoIds": [],
+            "notes": "Abre possibilidades completamente novas"
+        },
+        "movimentos_corpo": {
+            "id": "movimentos_corpo",
+            "title": "Movimentos de Tronco e Cabeça",
+            "description": "Isolamento e expressão corporal",
+            "icon": "💃",
+            "color": "#10B981",
+            "difficulty": 2,
+            "videoIds": [
+                "tronco-1",
+                "tronco-2",
+                "tronco-3",
+                "tronco-4",
+                "tronco-5",
+                "tronco-6",
+                "tronco-7",
+                "tronco-8",
+                "tronco-9",
+                "tronco-10",
+                "tronco-11",
+                "tronco-12",
+                "tronco-13",
+                "tronco-14"
+            ],
+            "notes": "Pode ser combinado com qualquer hub"
+        },
+        "conexoes_estilo": {
+            "id": "conexoes_estilo",
+            "title": "Conexões e Estilizações",
+            "description": "Elementos que conectam e elevam o estilo",
+            "icon": "✨",
+            "color": "#F97316",
+            "difficulty": 3,
+            "videoIds": [
+                "conexao-1",
+                "conexao-2"
+            ],
+            "notes": "Agrega ritmo e personalidade"
+        },
+        "finalizacao": {
+            "id": "finalizacao",
+            "title": "Finalizações",
+            "description": "Formas de encerrar uma sequência",
+            "icon": "🎬",
+            "color": "#6366F1",
+            "difficulty": 2,
+            "videoIds": [
+                "finalizacao-1",
+                "finalizacao-2"
+            ],
+            "notes": "Cria impacto visual no final"
+        }
+    },
+    "connections": [
+        {
+            "fromHub": "base_frente_tras",
+            "toHub": "abertura",
+            "videoIds": [
+                "abertura-1"
+            ],
+            "description": "Passo em S (Voltando para Trás)",
+            "difficulty": 5,
+            "notes": "Saída clássica da base"
+        },
+        {
+            "fromHub": "base_frente_tras",
+            "toHub": "base_lateral",
+            "videoIds": [
+                "giro-6"
+            ],
+            "description": "Bônus (Preparação para Giros)",
+            "difficulty": 2,
+            "notes": "Mudança de posição dinâmica"
+        },
+        {
+            "fromHub": "base_frente_tras",
+            "toHub": "dama_costas",
+            "videoIds": [
+                "giro-7"
+            ],
+            "description": "Ioiô",
+            "difficulty": 2,
+            "notes": "Movimento de va-e-vem"
+        },
+        {
+            "fromHub": "base_frente_tras",
+            "toHub": "base_frente_tras",
+            "videoIds": [
+                "tronco-6"
+            ],
+            "description": "Mergulho com Bloqueio e Retorno à Base",
+            "difficulty": 5,
+            "notes": "Mantém o fluxo na mesma base"
+        },
+        {
+            "fromHub": "base_lateral",
+            "toHub": "giros",
+            "videoIds": [
+                "giro-11"
+            ],
+            "description": "Raul",
+            "difficulty": 1,
+            "notes": "Preparação para giros complexos"
+        },
+        {
+            "fromHub": "base_lateral",
+            "toHub": "abertura",
+            "videoIds": [
+                "giro-9"
+            ],
+            "description": "Chicote",
+            "difficulty": 3,
+            "notes": "Movimento explosivo"
+        },
+        {
+            "fromHub": "base_lateral",
+            "toHub": "pendulos",
+            "videoIds": [
+                "pendulo-1"
+            ],
+            "description": "Pêndulo Saindo da Base Lateral",
+            "difficulty": 0,
+            "notes": "Transição suave e musical"
+        },
+        {
+            "fromHub": "abertura",
+            "toHub": "base_frente_tras",
+            "videoIds": [
+                "base-1"
+            ],
+            "description": "Retorno para Base Frente e Trás",
+            "difficulty": 5,
+            "notes": "Volta ao hub principal"
+        },
+        {
+            "fromHub": "giros",
+            "toHub": "base_frente_tras",
+            "videoIds": [
+                "base-1"
+            ],
+            "description": "Retorno à Base",
+            "difficulty": 4,
+            "notes": "Finaliza a sequência de giros"
+        },
+        {
+            "fromHub": "dama_costas",
+            "toHub": "pendulos",
+            "videoIds": [
+                "pendulo-2"
+            ],
+            "description": "Pêndulo com Dama de Costas",
+            "difficulty": 0,
+            "notes": "Exploração fluida dessa posição"
+        },
+        {
+            "fromHub": "dama_costas",
+            "toHub": "movimentos_corpo",
+            "videoIds": [
+                "tronco-2",
+                "tronco-3"
+            ],
+            "description": "Cuca / Frango",
+            "difficulty": 0,
+            "notes": "Movimento de cabeça nessa posição"
+        },
+        {
+            "fromHub": "dama_costas",
+            "toHub": "finalizacao",
+            "videoIds": [
+                "finalizacao-1"
+            ],
+            "description": "Cambrê Lateral",
+            "difficulty": 0,
+            "notes": "Finalização espetacular"
+        }
+    ],
+    "commonFlows": [
+        {
+            "name": "Flow Básico Clássico",
+            "difficulty": "Iniciante",
+            "sequence": [
+                "base_frente_tras",
+                "abertura",
+                "base_lateral",
+                "base_frente_tras"
+            ],
+            "description": "Saída simples e retorno"
+        },
+        {
+            "name": "Flow de Giros",
+            "difficulty": "Intermediário",
+            "sequence": [
+                "base_frente_tras",
+                "base_lateral",
+                "giros",
+                "base_frente_tras"
+            ],
+            "description": "Preparação e execução de giros"
+        },
+        {
+            "name": "Flow com Dama de Costas",
+            "difficulty": "Intermediário",
+            "sequence": [
+                "base_frente_tras",
+                "dama_costas",
+                "pendulos",
+                "base_frente_tras"
+            ],
+            "description": "Exploração de uma posição especial"
+        },
+        {
+            "name": "Flow Expressivo",
+            "difficulty": "Avançado",
+            "sequence": [
+                "base_frente_tras",
+                "movimentos_corpo",
+                "giros",
+                "finalizacao"
+            ],
+            "description": "Combina técnica com expressão corporal"
+        }
+    ]
+}

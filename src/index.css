@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #eef2ff;
+  --color-bg-card: #ffffff;
+  --color-navy: #1a1d3b;
+  --color-navy-soft: #2d3163;
+  --color-text: #4a4e6b;
+  --color-amber: #f5a623;
+  --color-amber-dark: #e09010;
+  --color-grad-teal: #00c9a7;
+  --color-grad-green: #00e676;
+  --color-grad-blue: #4fc3f7;
+  --color-grad-purple: #b39ddb;
+  --color-grad-pink: #f06292;
+  --color-grad-yellow: #ffd54f;
+  --font-body: 'Poppins', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: #eef2ff;
+  color: #4a4e6b;
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #eef2ff; }
+::-webkit-scrollbar-thumb { background: #b39ddb; border-radius: 3px; }
+
+.text-rainbow {
+  background: linear-gradient(90deg, #00c9a7, #4fc3f7, #b39ddb, #f06292);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-wrap {
+  max-width: 1024px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.video-card {
+  transform: translateY(0);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 14px;
+}
+.video-card:hover {
+  transform: translateY(-10px);
+  box-shadow:
+    0 10px 0 0 rgba(179, 157, 219, 0.55),
+    0 24px 48px rgba(26, 29, 59, 0.14);
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(26,29,59,0.07);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(26,29,59,0.13);
+}
