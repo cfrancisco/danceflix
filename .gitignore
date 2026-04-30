@@ -26,5 +26,4 @@ dist-ssr
 
 
 ## assets
-assets/videos/*
-assets
+/assets/videos/*

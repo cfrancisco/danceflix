@@ -2,9 +2,11 @@
 
 Minha biblioteca pessoal de passos de dança, com vídeos, sistema de treino e mapa mental de fluxo entre passos.
 
+**Site:** https://cfrancisco.github.io/danceflix/
+
 ## Features
 
-### Estilos de dança
+### Estilos de da   nça
 - **Multi-estilo** — Zouk, Bachata e Samba, cada um com identidade visual própria.
 - **Seletor de estilo** — barra de tabs sticky abaixo da navbar para trocar de estilo a qualquer momento; preferência salva no `localStorage`
 - Arquitetura preparada para adicionar novos estilos sem tocar nos componentes existentes
