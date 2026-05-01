@@ -1,9 +1,9 @@
-import type { Video } from '../../../types'
+import type { DanceStep } from '../../../types'
 
 /**
- * Samba video catalog.
- * `styleId` is omitted here — it is injected by the SambaStyle descriptor.
+ * Samba step catalog.
+ * `styleId` is omitted here — injected by the SambaStyle descriptor.
  */
-export const sambaVideos: Omit<Video, 'styleId'>[] = [
-  // Add videos here following the same structure as zouk/videos.ts
+export const sambaSteps: Omit<DanceStep, 'styleId'>[] = [
+  // Add steps here following the same structure as zouk/videos.ts
 ]

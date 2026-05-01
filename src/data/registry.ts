@@ -1,5 +1,4 @@
-import type { DanceStyle } from './types'
-import type { Video } from '../types'
+import type { DanceStyle, DanceStep } from '../types'
 import { ZoukStyle } from './styles/zouk'
 import { BachataStyle } from './styles/bachata'
 import { SambaStyle } from './styles/samba'
@@ -26,43 +25,44 @@ export function getStyleById(id: string): DanceStyle | undefined {
   return registeredStyles.find((s) => s.id === id)
 }
 
-/**
- * Flat list of all videos across every registered style.
- * Each video carries a `styleId` so it can be traced back to its style.
- */
-export const videos: Video[] = registeredStyles.flatMap((s) => s.videos)
+/** Flat list of all steps across every registered style. */
+export const steps: DanceStep[] = registeredStyles.flatMap((s) => s.steps)
 
-export function getVideoById(id: string): Video | undefined {
-  return videos.find((v) => v.id === id)
+/** Backward-compat alias */
+export const videos = steps
+
+export function getVideoById(id: string): DanceStep | undefined {
+  return steps.find((s) => s.id === id)
 }
 
 /**
- * Returns up to `limit` related videos from the same style, scored by:
+ * Returns up to `limit` related steps from the same style, scored by:
  *  +3 — same category
  *  +1 — each shared tag
- * The current video is excluded. Ties broken by date (newest first).
+ * The current step is excluded. Ties broken by date (newest first).
  */
-export function getRelatedVideos(video: Video, limit = 4): Video[] {
-  const pool = video.styleId
-    ? videos.filter((v) => v.styleId === video.styleId)
-    : videos
+export function getRelatedVideos(step: DanceStep, limit = 4): DanceStep[] {
+  const pool = step.styleId
+    ? steps.filter((s) => s.styleId === step.styleId)
+    : steps
 
   return pool
-    .filter((v) => v.id !== video.id)
-    .map((v) => {
-      const sameCategory = v.category === video.category ? 3 : 0
-      const sharedTags = v.tags.filter((t) => video.tags.includes(t)).length
-      return { video: v, score: sameCategory + sharedTags }
+    .filter((s) => s.id !== step.id)
+    .map((s) => {
+      const sameCategory = s.category === step.category ? 3 : 0
+      const sharedTags = s.tags.filter((t) => step.tags.includes(t)).length
+      return { step: s, score: sameCategory + sharedTags }
     })
-    .sort((a, b) => b.score - a.score || b.video.date.localeCompare(a.video.date))
+    .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map((item) => item.video)
+    .map((item) => item.step)
 }
 
-export function getVideoThumbnail(video: Video): string {
-  if (video.thumbnail) return video.thumbnail
-  if (video.youtubeId && video.youtubeId !== '') {
-    return `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`
+export function getVideoThumbnail(step: DanceStep): string {
+  if (step.thumbnail) return step.thumbnail
+  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  if (firstYT) {
+    return `https://img.youtube.com/vi/${firstYT}/hqdefault.jpg`
   }
   const svg = `<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
     <rect width="640" height="360" fill="#1a1a1a"/>

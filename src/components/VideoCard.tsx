@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import type { Video } from '../types'
+import type { DanceStep } from '../types'
 import { getVideoThumbnail } from '../data/videos'
 
 interface VideoCardProps {
-  video: Video
+  video: DanceStep
 }
 
 const LEVEL_CONFIG = [
@@ -19,8 +19,9 @@ const P = "'Poppins', sans-serif"
 
 export function VideoCard({ video }: VideoCardProps) {
   const thumbnail = getVideoThumbnail(video)
-  const hasRealThumb = video.youtubeId && video.youtubeId !== 'dQw4w9WgXcQ'
-  const level = LEVEL_CONFIG[video.knowledgeLevel] ?? LEVEL_CONFIG[0]
+  const firstYT = video.youtubeVideos.find((id) => id !== '')
+  const hasRealThumb = !!firstYT
+  const level = LEVEL_CONFIG[video.difficulty] ?? LEVEL_CONFIG[0]
 
   return (
     <Link to={`/video/${video.id}`} className="group block video-card" style={{ textDecoration: 'none' }}>
@@ -32,7 +33,7 @@ export function VideoCard({ video }: VideoCardProps) {
         {hasRealThumb ? (
           <img
             src={thumbnail}
-            alt={video.title}
+            alt={video.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
@@ -81,7 +82,7 @@ export function VideoCard({ video }: VideoCardProps) {
           className="text-sm leading-snug line-clamp-2 mb-1.5 transition-colors duration-150"
           style={{ fontFamily: P, fontWeight: 700, color: '#1a1d3b' }}
         >
-          {video.title}
+          {video.name}
         </h3>
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full shrink-0 inline-block" style={{ background: level.dot }} />

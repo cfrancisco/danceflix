@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import type { TrainingScore, VideoProgress, Video } from '../types'
+import type { Level, TrainingProgress, DanceStep } from '../types'
 import { useTraining } from '../hooks/useTraining'
 
 const P = "'Poppins', sans-serif"
 
-const SCORE_LABELS: Record<TrainingScore, { description: string; color: string }> = {
+const LEVEL_CONFIG: Record<Level, { description: string; color: string }> = {
   0: { description: 'Não praticado — nunca tentou',          color: '#8b95b8' },
   1: { description: 'Iniciante — começando a aprender',       color: '#f06292' },
   2: { description: 'Em desenvolvimento — precisa praticar',  color: '#ffa726' },
@@ -14,21 +14,21 @@ const SCORE_LABELS: Record<TrainingScore, { description: string; color: string }
 }
 
 interface TrainingPanelProps {
-  videoId: string
-  video: Video
+  stepId: string
+  step: DanceStep
 }
 
-export function TrainingPanel({ videoId, video }: TrainingPanelProps) {
+export function TrainingPanel({ stepId, step }: TrainingPanelProps) {
   const { getProgress, markReviewed, resetProgress } = useTraining()
-  const progress: VideoProgress | undefined = getProgress(videoId)
+  const progress: TrainingProgress | undefined = getProgress(stepId)
 
-  const [selectedScore, setSelectedScore] = useState<TrainingScore>(
-    progress?.trainingScore ?? video.knowledgeLevel,
+  const [selectedLevel, setSelectedLevel] = useState<Level>(
+    progress?.learningLevel ?? step.difficulty,
   )
   const [justSaved, setJustSaved] = useState(false)
 
   function handleMarkReviewed() {
-    markReviewed(videoId, selectedScore)
+    markReviewed(stepId, selectedLevel)
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2000)
   }
@@ -71,25 +71,25 @@ export function TrainingPanel({ videoId, video }: TrainingPanelProps) {
         )}
       </div>
 
-      {/* Score selector */}
+      {/* Level selector */}
       <div>
         <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b', marginBottom: '12px' }}>
-          Qual o seu <strong style={{ color: '#1a1d3b', fontWeight: 700 }}>nível de conhecimento</strong> neste passo?
+          Qual o seu <strong style={{ color: '#1a1d3b', fontWeight: 700 }}>nível de aprendizado</strong> neste passo?
         </p>
         <div style={{ display: 'flex', gap: '6px' }}>
-          {([0, 1, 2, 3, 4, 5] as TrainingScore[]).map((score) => {
-            const isSelected = selectedScore === score
+          {([0, 1, 2, 3, 4, 5] as Level[]).map((lvl) => {
+            const isSelected = selectedLevel === lvl
             return (
               <button
-                key={score}
-                onClick={() => setSelectedScore(score)}
-                title={SCORE_LABELS[score].description}
+                key={lvl}
+                onClick={() => setSelectedLevel(lvl)}
+                title={LEVEL_CONFIG[lvl].description}
                 style={{
                   flex: 1,
                   height: '40px',
                   borderRadius: '8px',
-                  border: `1px solid ${isSelected ? SCORE_LABELS[score].color : '#dde3f5'}`,
-                  background: isSelected ? SCORE_LABELS[score].color : '#ffffff',
+                  border: `1px solid ${isSelected ? LEVEL_CONFIG[lvl].color : '#dde3f5'}`,
+                  background: isSelected ? LEVEL_CONFIG[lvl].color : '#ffffff',
                   color: isSelected ? '#ffffff' : '#8b95b8',
                   fontFamily: P,
                   fontSize: '14px',
@@ -98,13 +98,13 @@ export function TrainingPanel({ videoId, video }: TrainingPanelProps) {
                   transition: 'all 0.15s',
                 }}
               >
-                {score}
+                {lvl}
               </button>
             )
           })}
         </div>
-        <p style={{ fontFamily: P, fontSize: '12px', marginTop: '8px', color: SCORE_LABELS[selectedScore].color }}>
-          {SCORE_LABELS[selectedScore].description}
+        <p style={{ fontFamily: P, fontSize: '12px', marginTop: '8px', color: LEVEL_CONFIG[selectedLevel].color }}>
+          {LEVEL_CONFIG[selectedLevel].description}
         </p>
       </div>
 
@@ -133,8 +133,8 @@ export function TrainingPanel({ videoId, video }: TrainingPanelProps) {
 
         {progress && (
           <button
-            onClick={() => resetProgress(videoId)}
-            title="Resetar progresso deste vídeo"
+            onClick={() => resetProgress(stepId)}
+            title="Resetar progresso deste passo"
             style={{
               padding: '11px',
               borderRadius: '10px',

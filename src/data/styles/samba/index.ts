@@ -1,7 +1,6 @@
-import type { DanceStyle } from '../../types'
-import type { Video } from '../../../types'
-import { sambaVideos } from './videos'
-import { sambaFlowMap } from './flowMap'
+import type { DanceStyle, DanceStep } from '../../../types'
+import { sambaSteps } from './videos'
+import { sambaHubs, sambaFlows } from './flowMap'
 
 /**
  * Samba — style descriptor.
@@ -14,6 +13,7 @@ export const SambaStyle: DanceStyle = {
   icon: '🎭',
   color: '#D97706',
   accentColor: '#059669',
-  videos: sambaVideos.map((v): Video => ({ ...v, styleId: 'samba' })),
-  flowMap: sambaFlowMap,
+  steps: sambaSteps.map((s): DanceStep => ({ ...s, styleId: 'samba' })),
+  hubs: sambaHubs,
+  flows: sambaFlows,
 }

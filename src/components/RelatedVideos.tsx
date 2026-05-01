@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
-import type { Video, VideoCategory } from '../types'
+import type { DanceStep, StepCategory } from '../types'
 import { getVideoThumbnail } from '../data/videos'
 import { CategoryTag } from './CategoryTag'
 
 const P = "'Poppins', sans-serif"
 
 interface RelatedVideosProps {
-  videos: Video[]
+  videos: DanceStep[]
 }
 
 export function RelatedVideos({ videos }: RelatedVideosProps) {
@@ -26,11 +26,8 @@ export function RelatedVideos({ videos }: RelatedVideosProps) {
   )
 }
 
-function RelatedCard({ video }: { video: Video }) {
+function RelatedCard({ video }: { video: DanceStep }) {
   const thumbnail = getVideoThumbnail(video)
-  const formattedDate = new Date(video.date).toLocaleDateString('pt-BR', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
 
   return (
     <Link
@@ -63,7 +60,7 @@ function RelatedCard({ video }: { video: Video }) {
       <div style={{ position: 'relative', flexShrink: 0, width: '110px', aspectRatio: '16/9', borderRadius: '10px', overflow: 'hidden', background: '#e8ecf8' }}>
         <img
           src={thumbnail}
-          alt={video.title}
+          alt={video.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
           loading="lazy"
         />
@@ -83,12 +80,10 @@ function RelatedCard({ video }: { video: Video }) {
           fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b', lineHeight: 1.35,
           overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         }}>
-          {video.title}
+          {video.name}
         </p>
-        <CategoryTag category={video.category as Exclude<VideoCategory, 'All'>} />
-        <p style={{ fontFamily: P, fontSize: '11px', color: '#8b95b8', marginTop: 'auto' }}>
-          {formattedDate}
-        </p>
+        <CategoryTag category={video.category as Exclude<StepCategory, 'All'>} />
+         
       </div>
     </Link>
   )

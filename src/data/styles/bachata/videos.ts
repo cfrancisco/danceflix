@@ -1,9 +1,9 @@
-import type { Video } from '../../../types'
+import type { DanceStep } from '../../../types'
 
 /**
- * Bachata video catalog.
- * `styleId` is omitted here — it is injected by the BachataStyle descriptor.
+ * Bachata step catalog.
+ * `styleId` is omitted here — injected by the BachataStyle descriptor.
  */
-export const bachataVideos: Omit<Video, 'styleId'>[] = [
-  // Add videos here following the same structure as zouk/videos.ts
+export const bachataSteps: Omit<DanceStep, 'styleId'>[] = [
+  // Add steps here following the same structure as zouk/videos.ts
 ]

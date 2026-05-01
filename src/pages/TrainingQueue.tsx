@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import { useTraining } from '../hooks/useTraining'
 import { CategoryTag } from '../components/CategoryTag'
 import { useActiveStyle } from '../context/StyleContext'
-import type { TrainingScore, VideoCategory } from '../types'
+import type { Level, StepCategory, DanceStep } from '../types'
 
 const P = "'Poppins', sans-serif"
 
-const SCORE_CONFIG: Record<TrainingScore, { label: string; barColor: string; textColor: string; bg: string; border: string }> = {
+const SCORE_CONFIG: Record<Level, { label: string; barColor: string; textColor: string; bg: string; border: string }> = {
   0: { label: 'Não praticado',      barColor: '#b39ddb', textColor: '#7c5cbf', bg: 'rgba(179,157,219,0.1)', border: 'rgba(179,157,219,0.3)' },
   1: { label: 'Iniciante',          barColor: '#f06292', textColor: '#c2185b', bg: 'rgba(240,98,146,0.1)',  border: 'rgba(240,98,146,0.3)'  },
   2: { label: 'Em desenvolvimento', barColor: '#ffa726', textColor: '#e65100', bg: 'rgba(255,167,38,0.1)',  border: 'rgba(255,167,38,0.3)'  },
@@ -19,40 +19,40 @@ const SCORE_CONFIG: Record<TrainingScore, { label: string; barColor: string; tex
 export function TrainingQueue() {
   const { getProgress } = useTraining()
   const { activeStyle } = useActiveStyle()
-  const styleVideos = activeStyle.videos
+  const styleSteps = activeStyle.steps
 
   const categories = useMemo(() => {
-    const cats = new Set(styleVideos.map((v) => v.category))
+    const cats = new Set(styleSteps.map((s) => s.category))
     return Array.from(cats)
-  }, [styleVideos])
+  }, [styleSteps])
 
   const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<'needs' | 'ontrack' | 'all'>('all')
   const [sortBy, setSortBy] = useState<'score' | 'name' | 'recent' | 'never'>('score')
 
-  const allVideosWithProgress = styleVideos.map((video) => {
-    const progress = getProgress(video.id)
+  const allStepsWithProgress = styleSteps.map((step) => {
+    const progress = getProgress(step.id)
     return {
-      video,
+      step,
       progress,
-      effectiveScore: progress?.trainingScore ?? video.knowledgeLevel,
+      effectiveScore: (progress?.learningLevel ?? step.difficulty) as Level,
       timesReviewed: progress?.timesReviewed ?? 0,
       lastReviewedAt: progress?.lastReviewedAt,
     }
   })
 
   const filteredAndSorted = useMemo(() => {
-    let result = allVideosWithProgress
-    if (selectedCategory !== 'all') result = result.filter((i) => i.video.category === selectedCategory)
+    let result = allStepsWithProgress
+    if (selectedCategory !== 'all') result = result.filter((i) => i.step.category === selectedCategory)
     if (statusFilter === 'needs') result = result.filter((i) => i.effectiveScore <= 2)
     else if (statusFilter === 'ontrack') result = result.filter((i) => i.effectiveScore >= 3)
 
     return result.sort((a, b) => {
       if (sortBy === 'score') {
         if (a.effectiveScore !== b.effectiveScore) return a.effectiveScore - b.effectiveScore
-        return a.video.title.localeCompare(b.video.title)
+        return a.step.name.localeCompare(b.step.name)
       }
-      if (sortBy === 'name') return a.video.title.localeCompare(b.video.title)
+      if (sortBy === 'name') return a.step.name.localeCompare(b.step.name)
       if (sortBy === 'recent') {
         const aT = a.lastReviewedAt ? new Date(a.lastReviewedAt).getTime() : 0
         const bT = b.lastReviewedAt ? new Date(b.lastReviewedAt).getTime() : 0
@@ -66,7 +66,7 @@ export function TrainingQueue() {
       }
       return 0
     })
-  }, [allVideosWithProgress, selectedCategory, statusFilter, sortBy])
+  }, [allStepsWithProgress, selectedCategory, statusFilter, sortBy])
 
   const needsTraining = filteredAndSorted.filter((i) => i.effectiveScore <= 2)
   const onTrack = filteredAndSorted.filter((i) => i.effectiveScore >= 3)
@@ -187,9 +187,9 @@ export function TrainingQueue() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {filteredAndSorted.map((item, index) => (
                 <TrainingRow
-                  key={item.video.id}
+                  key={item.step.id}
                   rank={statusFilter === 'all' ? index + 1 : undefined}
-                  video={item.video}
+                  step={item.step}
                   timesReviewed={item.timesReviewed}
                   score={item.effectiveScore}
                   lastReviewedAt={item.lastReviewedAt}
@@ -205,22 +205,22 @@ export function TrainingQueue() {
 
 interface TrainingRowProps {
   rank?: number
-  video: { id: string; title: string; category: string; youtubeId?: string }
+  step: DanceStep
   timesReviewed: number
-  score: TrainingScore
+  score: Level
   lastReviewedAt?: string
 }
 
-function TrainingRow({ rank, video, timesReviewed, score, lastReviewedAt }: TrainingRowProps) {
+function TrainingRow({ rank, step, timesReviewed, score, lastReviewedAt }: TrainingRowProps) {
   const cfg = SCORE_CONFIG[score]
   const lastReviewed = lastReviewedAt
     ? new Date(lastReviewedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
     : null
-  const hasRealVideo = video.youtubeId && video.youtubeId !== 'dQw4w9WgXcQ'
+  const firstYT = step.youtubeVideos.find((id) => id !== '')
 
   return (
     <Link
-      to={`/video/${video.id}`}
+      to={`/video/${step.id}`}
       className="group"
       style={{
         display: 'flex', alignItems: 'center', gap: '16px',
@@ -237,10 +237,10 @@ function TrainingRow({ rank, video, timesReviewed, score, lastReviewedAt }: Trai
         </span>
       )}
 
-      {hasRealVideo ? (
+      {firstYT ? (
         <img
-          src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
-          alt={video.title}
+          src={`https://img.youtube.com/vi/${firstYT}/hqdefault.jpg`}
+          alt={step.name}
           style={{ width: '72px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
           loading="lazy"
         />
@@ -258,10 +258,10 @@ function TrainingRow({ rank, video, timesReviewed, score, lastReviewedAt }: Trai
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: P, fontSize: '14px', fontWeight: 700, color: '#1a1d3b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-          {video.title}
+          {step.name}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <CategoryTag category={video.category as Exclude<VideoCategory, 'All'>} />
+          <CategoryTag category={step.category as Exclude<StepCategory, 'All'>} />
           {timesReviewed > 0 && (
             <span style={{ fontFamily: P, fontSize: '11px', color: '#8b95b8' }}>
               {timesReviewed}× {lastReviewed && `· ${lastReviewed}`}

@@ -1,83 +1,98 @@
 import { useState, useCallback } from 'react'
-import type { VideoProgress, TrainingScore } from '../types'
+import type { TrainingProgress, Level } from '../types'
 import { getVideoById } from '../data/videos'
 
-const STORAGE_KEY = 'zouksteps:training'
+const STORAGE_KEY = 'danceflix:training'
+const LEGACY_KEY  = 'zouksteps:training'
 
-function readStore(): Record<string, VideoProgress> {
+function readStore(): Record<string, TrainingProgress> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, VideoProgress>) : {}
+    if (raw) return JSON.parse(raw) as Record<string, TrainingProgress>
+
+    // One-time migration from the old storage key / old field names
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (legacy) {
+      const old = JSON.parse(legacy) as Record<string, Record<string, unknown>>
+      const migrated: Record<string, TrainingProgress> = {}
+      for (const [key, val] of Object.entries(old)) {
+        migrated[key] = {
+          stepId:        (val['videoId'] as string)       ?? key,
+          timesReviewed: (val['timesReviewed'] as number) ?? 0,
+          learningLevel: (val['trainingScore'] as Level)  ?? 0,
+          lastReviewedAt:(val['lastReviewedAt'] as string)?? new Date().toISOString(),
+          notes:          val['notes'] as string | undefined,
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+      return migrated
+    }
+
+    return {}
   } catch {
     return {}
   }
 }
 
-function writeStore(store: Record<string, VideoProgress>): void {
+function writeStore(store: Record<string, TrainingProgress>): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
 }
 
 export function useTraining() {
-  const [store, setStore] = useState<Record<string, VideoProgress>>(readStore)
+  const [store, setStore] = useState<Record<string, TrainingProgress>>(readStore)
 
   const getProgress = useCallback(
-    (videoId: string): VideoProgress | undefined => store[videoId],
+    (stepId: string): TrainingProgress | undefined => store[stepId],
     [store],
   )
 
-  const markReviewed = useCallback((videoId: string, score?: TrainingScore) => {
+  const markReviewed = useCallback((stepId: string, level?: Level) => {
     setStore((prev) => {
-      const existing = prev[videoId]
-      
-      // Se não tem score e ainda não existe progresso, usa o knowledgeLevel do vídeo
-      let finalScore: TrainingScore = score ?? existing?.trainingScore ?? 0
-      
-      if (!existing && score === undefined) {
-        const video = getVideoById(videoId)
-        if (video) {
-          finalScore = video.knowledgeLevel
-        }
+      const existing = prev[stepId]
+
+      // Default to the step's difficulty if no progress exists and no level given
+      let finalLevel: Level = level ?? existing?.learningLevel ?? 0
+      if (!existing && level === undefined) {
+        const step = getVideoById(stepId)
+        if (step) finalLevel = step.difficulty
       }
-      
-      const updated: VideoProgress = {
-        videoId,
+
+      const updated: TrainingProgress = {
+        stepId,
         timesReviewed: (existing?.timesReviewed ?? 0) + 1,
-        trainingScore: finalScore,
+        learningLevel: finalLevel,
         lastReviewedAt: new Date().toISOString(),
         notes: existing?.notes,
       }
-      const next = { ...prev, [videoId]: updated }
+      const next = { ...prev, [stepId]: updated }
       writeStore(next)
       return next
     })
   }, [])
 
-  const updateScore = useCallback((videoId: string, score: TrainingScore) => {
+  const updateLevel = useCallback((stepId: string, level: Level) => {
     setStore((prev) => {
-      const existing = prev[videoId]
+      const existing = prev[stepId]
       if (!existing) return prev
-      const next = {
-        ...prev,
-        [videoId]: { ...existing, trainingScore: score },
-      }
+      const next = { ...prev, [stepId]: { ...existing, learningLevel: level } }
       writeStore(next)
       return next
     })
   }, [])
 
-  const resetProgress = useCallback((videoId: string) => {
+  const resetProgress = useCallback((stepId: string) => {
     setStore((prev) => {
       const next = { ...prev }
-      delete next[videoId]
+      delete next[stepId]
       writeStore(next)
       return next
     })
   }, [])
 
-  /** All video IDs that have been reviewed, sorted by training score desc */
+  /** All step IDs that have been reviewed, sorted by learningLevel desc */
   const allProgress = Object.values(store).sort(
-    (a, b) => b.trainingScore - a.trainingScore,
+    (a, b) => b.learningLevel - a.learningLevel,
   )
 
-  return { getProgress, markReviewed, updateScore, resetProgress, allProgress }
+  return { getProgress, markReviewed, updateLevel, resetProgress, allProgress }
 }

@@ -1,7 +1,7 @@
-import type { VideoCategory } from '../types'
+import type { StepCategory } from '../types'
 
 interface CategoryTagProps {
-  category: Exclude<VideoCategory, 'All'>
+  category: Exclude<StepCategory, 'All'>
   size?: 'sm' | 'md'
 }
 

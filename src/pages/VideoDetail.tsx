@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { getVideoById, getRelatedVideos } from '../data/videos'
 import { CategoryTag } from '../components/CategoryTag'
-import type { VideoCategory, VideoSource } from '../types'
+import type { StepCategory, VideoSource } from '../types'
 import { TrainingPanel } from '../components/TrainingPanel'
 import { RelatedVideos } from '../components/RelatedVideos'
 
@@ -17,7 +17,6 @@ export function VideoDetail() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [id])
 
-  // Reset source tab when navigating to a different video
   useEffect(() => {
     setActiveIdx(0)
   }, [id])
@@ -35,18 +34,14 @@ export function VideoDetail() {
     )
   }
 
-  const formattedDate = new Date(video.date).toLocaleDateString('pt-BR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
-
   const related = getRelatedVideos(video)
 
-  // Build effective source list: prefer video.sources if present,
-  // otherwise synthesize one from the top-level youtubeId/videoUrl.
-  const effectiveSources: VideoSource[] = video.sources && video.sources.length > 0
-    ? video.sources
-    : [{ youtubeId: video.youtubeId, videoUrl: video.videoUrl, duration: video.duration, presenter: video.presenter }]
-  const activeSource = effectiveSources[Math.min(activeIdx, effectiveSources.length - 1)]
+  // Build effective source list from youtubeVideos + localVideos
+  const ytSources: VideoSource[] = video.youtubeVideos
+    .filter((id) => id !== '')
+    .map((youtubeId) => ({ youtubeId }))
+  const effectiveSources: VideoSource[] = [...ytSources, ...video.localVideos]
+  const activeSource = effectiveSources[Math.min(activeIdx, effectiveSources.length - 1)] ?? {}
 
   return (
     <div style={{ background: '#ffffff', minHeight: '100vh' }}>
@@ -74,7 +69,6 @@ export function VideoDetail() {
 
       <main style={{ maxWidth: '960px', margin: '0 auto', padding: '40px 24px 80px' }}>
 
-        {/* Player */}
         {/* Source selector — shown only when there are multiple sources */}
         {effectiveSources.length > 1 && (
           <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
@@ -102,7 +96,7 @@ export function VideoDetail() {
             <iframe
               style={{ width: '100%', height: '100%', border: 'none' }}
               src={`https://www.youtube.com/embed/${activeSource.youtubeId}`}
-              title={video.title}
+              title={video.name}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
@@ -132,9 +126,9 @@ export function VideoDetail() {
         {/* Title + category */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
           <h1 style={{ fontFamily: P, fontWeight: 800, fontSize: 'clamp(22px, 4vw, 32px)', color: '#1a1d3b', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
-            {video.title}
+            {video.name}
           </h1>
-          <CategoryTag category={video.category as Exclude<VideoCategory, 'All'>} size="md" />
+          <CategoryTag category={video.category as Exclude<StepCategory, 'All'>} size="md" />
         </div>
 
         {/* Metadata row */}
@@ -152,7 +146,6 @@ export function VideoDetail() {
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {formattedDate}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,7 +197,7 @@ export function VideoDetail() {
           </div>
         )}
 
-        <TrainingPanel videoId={video.id} video={video} />
+        <TrainingPanel stepId={video.id} step={video} />
         <RelatedVideos videos={related} />
       </main>
     </div>

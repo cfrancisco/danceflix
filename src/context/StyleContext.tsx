@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import { getAllStyles } from '../data/registry'
-import type { DanceStyle } from '../data/types'
+import type { DanceStyle } from '../types'
 
 interface StyleContextValue {
   activeStyle: DanceStyle

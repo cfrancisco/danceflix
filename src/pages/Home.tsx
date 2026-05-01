@@ -3,7 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { VideoCard } from '../components/VideoCard'
 import { AnimatedSection } from '../components/AnimatedSection'
 import { useActiveStyle } from '../context/StyleContext'
-import type { Video } from '../types'
+import type { DanceStep } from '../types'
 
 // Zouk-specific category color overrides — falls back to style accent for unknown categories
 const CAT_ACTIVE: Record<string, { bg: string; color: string; border: string }> = {
@@ -23,18 +23,16 @@ export function Home() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { activeStyle } = useActiveStyle()
-  const styleVideos = activeStyle.videos
+  const styleSteps = activeStyle.steps
   const accent = activeStyle.accentColor ?? activeStyle.color
 
   const [hoveredStrip, setHoveredStrip] = useState<string | null>(null)
 
-  // Derive category list dynamically from the active style's videos
   const categories = useMemo(() => {
-    const cats = new Set(styleVideos.map((v) => v.category))
+    const cats = new Set(styleSteps.map((s) => s.category))
     return ['All', ...Array.from(cats)]
-  }, [styleVideos])
+  }, [styleSteps])
 
-  // Pair activeCategory with the style it belongs to — resets to 'All' automatically on style change
   const [categoryState, setCategoryState] = useState<{ styleId: string; cat: string }>({
     styleId: activeStyle.id,
     cat: 'All',
@@ -44,32 +42,28 @@ export function Home() {
   const setActiveCategory = (cat: string) =>
     setCategoryState({ styleId: activeStyle.id, cat })
 
-  // Highlights: YouTube-only videos, shuffled once per style change
-  const [highlights, setHighlights] = useState<Video[]>([])
+  const [highlights, setHighlights] = useState<DanceStep[]>([])
   useEffect(() => {
-    const withYoutube = styleVideos.filter((v) => {
-      if (v.youtubeId && v.youtubeId !== '') return true
-      return v.sources?.some((s) => s.youtubeId && s.youtubeId !== '') ?? false
-    })
-    const pool = withYoutube.length >= 5 ? withYoutube : styleVideos
+    const withYoutube = styleSteps.filter((s) => s.youtubeVideos.some((id) => id !== ''))
+    const pool = withYoutube.length >= 5 ? withYoutube : styleSteps
     const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 5)
     setHighlights(shuffled)
-  }, [activeStyle.id, styleVideos])
+  }, [activeStyle.id, styleSteps])
 
   const query = searchParams.get('q')?.toLowerCase() ?? ''
 
   const filtered = useMemo(() => {
-    return styleVideos.filter((v) => {
-      const matchesCategory = activeCategory === 'All' || v.category === activeCategory
+    return styleSteps.filter((s) => {
+      const matchesCategory = activeCategory === 'All' || s.category === activeCategory
       const matchesQuery =
         !query ||
-        v.title.toLowerCase().includes(query) ||
-        v.description.toLowerCase().includes(query) ||
-        v.presenter.toLowerCase().includes(query) ||
-        v.tags.some((t) => t.toLowerCase().includes(query))
+        s.name.toLowerCase().includes(query) ||
+        s.description.toLowerCase().includes(query) ||
+        s.presenter.toLowerCase().includes(query) ||
+        s.tags.some((t) => t.toLowerCase().includes(query))
       return matchesCategory && matchesQuery
     })
-  }, [styleVideos, activeCategory, query])
+  }, [styleSteps, activeCategory, query])
 
   return (
     <div>
@@ -127,7 +121,7 @@ export function Home() {
                 className="group relative overflow-hidden block"
                 style={{ borderRadius: '20px', aspectRatio: '4/3', boxShadow: '0 8px 40px rgba(26,29,59,0.15)' }}
               >
-                <FeaturedThumb video={highlights[0]} />
+                <FeaturedThumb step={highlights[0]} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,29,59,0.85) 0%, rgba(26,29,59,0.05) 55%, transparent 100%)' }} />
                 <div
                   className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100"
@@ -142,7 +136,7 @@ export function Home() {
                     {highlights[0]?.category}
                   </span>
                   <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '20px', color: '#ffffff', marginTop: '4px', lineHeight: 1.25 }}>
-                    {highlights[0]?.title}
+                    {highlights[0]?.name}
                   </h3>
                 </div>
               </Link>
@@ -175,43 +169,43 @@ export function Home() {
             {/* Accordion strip */}
             <AnimatedSection delay={0.1}>
             <div style={{ display: 'flex', height: '300px', gap: '6px' }}>
-              {highlights.slice(1).map((v) => (
+              {highlights.slice(1).map((s) => (
                 <Link
-                  key={v.id}
-                  to={`/video/${v.id}`}
-                  onMouseEnter={() => setHoveredStrip(v.id)}
+                  key={s.id}
+                  to={`/video/${s.id}`}
+                  onMouseEnter={() => setHoveredStrip(s.id)}
                   onMouseLeave={() => setHoveredStrip(null)}
                   className="group relative overflow-hidden block"
                   style={{
                     borderRadius: '16px',
-                    flexGrow: hoveredStrip === v.id ? 3 : (hoveredStrip ? 0.55 : 1),
+                    flexGrow: hoveredStrip === s.id ? 3 : (hoveredStrip ? 0.55 : 1),
                     flexShrink: 1,
                     flexBasis: 0,
                     minWidth: 0,
-                    filter: hoveredStrip === v.id ? 'none' : 'saturate(0.5) brightness(0.9)',
+                    filter: hoveredStrip === s.id ? 'none' : 'saturate(0.5) brightness(0.9)',
                     transition: 'flex-grow 0.45s cubic-bezier(0.4,0,0.2,1), filter 0.4s ease',
                     textDecoration: 'none',
                   }}
                 >
-                  <FeaturedThumb video={v} />
+                  <FeaturedThumb step={s} />
                   <div style={{
                     position: 'absolute', inset: 0,
                     background: 'linear-gradient(to top, rgba(26,29,59,0.82) 0%, transparent 60%)',
-                    opacity: hoveredStrip === v.id ? 1 : 0,
+                    opacity: hoveredStrip === s.id ? 1 : 0,
                     transition: 'opacity 0.3s',
                   }} />
                   <div style={{
                     position: 'absolute', bottom: 0, left: 0, padding: '14px',
-                    opacity: hoveredStrip === v.id ? 1 : 0,
-                    transform: hoveredStrip === v.id ? 'translateY(0)' : 'translateY(8px)',
+                    opacity: hoveredStrip === s.id ? 1 : 0,
+                    transform: hoveredStrip === s.id ? 'translateY(0)' : 'translateY(8px)',
                     transition: 'opacity 0.25s 0.1s, transform 0.25s 0.1s',
                   }}>
                     <span style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, color: '#f5a623' }}>
-                      {v.category}
+                      {s.category}
                     </span>
                     <p style={{ fontFamily: P, fontSize: '14px', fontWeight: 700, color: '#fff', marginTop: '3px', lineHeight: 1.25,
                       overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {v.title}
+                      {s.name}
                     </p>
                   </div>
                 </Link>
@@ -294,8 +288,8 @@ export function Home() {
           {filtered.length > 0 ? (
             <AnimatedSection>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-              {filtered.map((video) => (
-                <VideoCard key={video.id} video={video} />
+              {filtered.map((step) => (
+                <VideoCard key={step.id} video={step} />
               ))}
             </div>
             </AnimatedSection>
@@ -340,14 +334,14 @@ export function Home() {
   )
 }
 
-function FeaturedThumb({ video }: { video: Video | undefined }) {
-  if (!video) return <div style={{ width: '100%', height: '100%', background: '#dde3f5' }} />
-  const hasThumb = video.youtubeId && video.youtubeId !== 'dQw4w9WgXcQ'
-  if (hasThumb) {
+function FeaturedThumb({ step }: { step: DanceStep | undefined }) {
+  if (!step) return <div style={{ width: '100%', height: '100%', background: '#dde3f5' }} />
+  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  if (firstYT) {
     return (
       <img
-        src={`https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
-        alt={video.title}
+        src={`https://img.youtube.com/vi/${firstYT}/maxresdefault.jpg`}
+        alt={step.name}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         className="group-hover:scale-105 transition-transform duration-500"
       />

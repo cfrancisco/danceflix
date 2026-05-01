@@ -1,12 +1,11 @@
-import type { DanceStyle } from '../../types'
-import type { Video } from '../../../types'
-import { zoukVideos } from './videos'
-import { zoukFlowMap } from './flowMap'
+import type { DanceStyle, DanceStep } from '../../types'
+import { zoukSteps } from './zoukSteps'
+import { zoukFlows, zoukHubs } from './flowMap'
 
 /**
  * Zouk — style descriptor.
  *
- * `styleId` is injected into every video here so the raw video data
+ * `styleId` is injected into every step here so the raw data
  * in `videos.ts` stays clean and style-agnostic.
  */
 export const ZoukStyle: DanceStyle = {
@@ -16,6 +15,7 @@ export const ZoukStyle: DanceStyle = {
   icon: '🌊',
   color: '#3B82F6',
   accentColor: '#f5a623',
-  videos: zoukVideos.map((v): Video => ({ ...v, styleId: 'zouk' })),
-  flowMap: zoukFlowMap,
+  steps: zoukSteps.map((v): DanceStep => ({ ...v, styleId: 'zouk', name: v.name ?? (v as any).title ?? '' })),
+  flows: zoukFlows,
+  hubs: zoukHubs
 }
