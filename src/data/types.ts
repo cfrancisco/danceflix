@@ -1,4 +1,16 @@
-import type { Video } from '../types'
+/**
+ * Backward-compatible shim.
+ * All types now live in src/types/index.ts.
+ */
+export type {
+  Hub,
+  Flow as CommonFlow,
+  DanceStyle,
+  DanceStep,
+} from '../types/index'
+
+// FlowMap is still used by FlowMapGraph and FlowMap page — keep it here
+import type { Hub, Flow } from '../types/index'
 
 // ── Hub ────────────────────────────────────────────────────────────────────────
 export interface Hub {

@@ -1,12 +1,20 @@
-export type VideoCategory =
-  | 'Base e Deslocamento'
-  | 'Abertura'
-  | 'Giros e Dinâmicas'
-  | 'Pêndulos'
-  | 'Movimentos de Tronco e Cabeça'
-  | 'Conexões e Estilizações'
-  | 'Finalizações'
-  | 'All'
+/**
+ * Backward-compatible shim.
+ * All types now live in src/types/index.ts.
+ */
+export type {
+  SkillLevel,
+  TrainingScore,
+  VideoSource,
+  DanceStep,
+  Hub,
+  Flow,
+  DanceStyle,
+  TrainingProgress,
+  Video,
+  VideoProgress,
+  VideoCategory,
+} from './types/index'
 
 /**
  * 1 = Needs training — critical gap
