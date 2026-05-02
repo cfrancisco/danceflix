@@ -24,8 +24,6 @@ export interface VideoSource {
   videoUrl?: string
   /** Overrides the step's default duration */
   duration?: string
-  /** Overrides the step's default presenter */
-  presenter?: string
 }
 
 // ── DanceStep ─────────────────────────────────────────────────────────────────
@@ -52,34 +50,29 @@ export interface DanceStep {
   tags: string[]
   /** Step category (matches StepCategory) */
   category: string
-  presenter: string
   /** Objective technical complexity — set at creation, does not change with practice */
   difficulty: Level
   technicalDetails?: string
-  /** Hub IDs this step belongs to (for FlowMap graph membership) */
-  hubs?: string[]
 }
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
 
 /**
- * A Hub is a special DanceStep — an anchor node in the FlowMap.
- * Every Hub is conceptually a DanceStep, but not every DanceStep is a Hub.
+ * A Hub is a DanceStep that participates in the FlowMap graph.
+ * `stepId` equals the DanceStep.id it represents — name/description/difficulty
+ * are read from the step, not duplicated here.
  *
- * Hub IDs match the `hubs` array on DanceStep to establish membership.
+ * What makes a step a hub is simply having connections (incomingSteps or outgoingSteps).
  */
 export interface Hub {
-  id: string
-  name: string
-  description: string
+  /** Must equal a DanceStep.id — this hub IS that step */
+  stepId: string
   icon: string
   color: string
-  /** Conceptual complexity of this node (0 = easiest, 5 = hardest) */
-  difficulty: Level
-  notes: string
-  /** IDs of other Hubs that transition INTO this hub */
+  notes?: string
+  /** stepIds of other Hub-steps that flow INTO this hub */
   incomingSteps: string[]
-  /** IDs of other Hubs reachable FROM this hub */
+  /** stepIds of other Hub-steps reachable FROM this hub */
   outgoingSteps: string[]
 }
 
@@ -90,7 +83,7 @@ export interface Flow {
   id: string
   name: string
   description: string
-  /** Ordered list of Hub IDs defining the path */
+  /** Ordered list of Hub stepIds defining the path */
   sequence: string[]
   difficulty: Level
   videos?: VideoSource[]

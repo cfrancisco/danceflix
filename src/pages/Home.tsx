@@ -59,7 +59,6 @@ export function Home() {
         !query ||
         s.name.toLowerCase().includes(query) ||
         s.description.toLowerCase().includes(query) ||
-        s.presenter.toLowerCase().includes(query) ||
         s.tags.some((t) => t.toLowerCase().includes(query))
       return matchesCategory && matchesQuery
     })

@@ -53,7 +53,7 @@ export function getRelatedVideos(step: DanceStep, limit = 4): DanceStep[] {
       const sharedTags = s.tags.filter((t) => step.tags.includes(t)).length
       return { step: s, score: sameCategory + sharedTags }
     })
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score - a.score || a.step.name.localeCompare(b.step.name))
     .slice(0, limit)
     .map((item) => item.step)
 }

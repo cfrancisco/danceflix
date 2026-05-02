@@ -6,7 +6,7 @@ Minha biblioteca pessoal de passos de dança, com vídeos, sistema de treino e m
 
 ## Features
 
-### Estilos de da   nça
+### Estilos de dança
 - **Multi-estilo** — Zouk, Bachata e Samba, cada um com identidade visual própria.
 - **Seletor de estilo** — barra de tabs sticky abaixo da navbar para trocar de estilo a qualquer momento; preferência salva no `localStorage`
 - Arquitetura preparada para adicionar novos estilos sem tocar nos componentes existentes
@@ -14,9 +14,7 @@ Minha biblioteca pessoal de passos de dança, com vídeos, sistema de treino e m
 ### Biblioteca de vídeos
 - **Vídeos do YouTube e locais** — cada passo suporta embed do YouTube ou arquivo de vídeo local (`.mp4`)
 - **Múltiplas fontes por passo** — um mesmo passo pode ter várias gravações (câmera frontal, slow-motion, ângulo diferente), com seletor de tabs no player
-- **Metadados por fonte** — duração e apresentador podem variar por gravação
-- Filtro por categoria com chips coloridos por estilo
-- Busca por título, descrição, apresentador e tags
+- Filtro por título, descrição e tags
 
 ### Vídeo do dia
 - Seção hero com 5 vídeos em destaque sortidos a cada visita
@@ -36,13 +34,7 @@ Minha biblioteca pessoal de passos de dança, com vídeos, sistema de treino e m
 - Layout fixo para Zouk; layout circular dinâmico gerado automaticamente para estilos novos
 - Fluxos comuns pré-definidos por estilo (sequências típicas de passos)
 
-### Design e UX
-- Identidade visual adaptada por estilo ativo (cor da navbar, CTA, tags)
-- Animações de entrada na viewport via Framer Motion (`AnimatedSection`)
-- Totalmente responsivo; sem dependência de backend ou CMS
-
 ## Stack
-
 - Vite + React 19 + TypeScript
 - Tailwind CSS v4 (via plugin Vite, sem config file)
 - React Router v7 com `HashRouter` (compatível com GitHub Pages)
@@ -63,18 +55,4 @@ npm run build     # tsc -b && vite build
 npm run deploy    # build + push para gh-pages
 ```
 
-O deploy usa `gh-pages` para o branch `gh-pages`. Configurar em **Settings → Pages → branch `gh-pages`** no repositório do GitHub.
-
-## Adicionando conteúdo
-
-### Novo vídeo (Zouk)
-Editar `src/data/styles/zouk/videos.ts` e adicionar ao array `zoukVideos`. Campos obrigatórios: `id`, `title`, `description`, `duration`, `date`, `category`, `tags`, `presenter`, `knowledgeLevel`.
-
-### Novo estilo de dança
-1. Criar `src/data/styles/<id>/videos.ts`, `flowMap.ts`, `index.ts`
-2. Registrar em `src/data/registry.ts`
-
-### Novo hub no FlowMap
-1. Adicionar entrada em `src/data/styles/zouk/flowMap.ts` → `hubs`
-2. Adicionar posição em `src/components/FlowMapGraph.tsx` → `ZOUK_POSITIONS`
-3. Adicionar conexões em `connections`
+O deploy usa `gh-pages` para o branch `gh-pages`.

@@ -1,67 +1,121 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { getVideoById, getVideoThumbnail } from '../data/videos'
-import type { Hub, DanceStep } from '../types'
+import type { Hub, DanceStep, Flow, Level } from '../types'
+
+const FLOW_COLOR = '#3B82F6'
+const FLOW_COLOR_DIM = 'rgba(59,130,246,0.35)'
+
+function customFlowsKey(styleId: string) {
+  return `danceflix.customFlows.${styleId}`
+}
+
+function loadCustomFlows(styleId: string): Flow[] {
+  try {
+    const raw = localStorage.getItem(customFlowsKey(styleId))
+    return raw ? (JSON.parse(raw) as Flow[]) : []
+  } catch { return [] }
+}
+
+function saveCustomFlows(styleId: string, flows: Flow[]) {
+  try { localStorage.setItem(customFlowsKey(styleId), JSON.stringify(flows)) } catch { /* noop */ }
+}
 
 const DM = "'Poppins', sans-serif"
-const SERIF = "'Poppins', sans-serif"
 
-type HubId = string
-
-// Hub enriched with the IDs of steps that list it in their hubs[]
-interface HubWithSteps extends Hub {
-  stepIds: string[]
+// Precomputed hub positions for the zouk set (keyed by stepId).
+// Spaced apart enough to give each hub room for its satellite ring.
+const ZOUK_HUB_POSITIONS: Record<string, { x: number; y: number }> = {
+  'base-1':            { x:    0, y:    0 },
+  'base-2':            { x: -520, y: -340 },
+  'giro-dama-simples': { x:  580, y:  140 },
 }
 
-// Precomputed radial layout for Zouk — base_frente_tras at center
-const ZOUK_POSITIONS: Record<string, { x: number; y: number }> = {
-  base_frente_tras:  { x:    0, y:    0 },
-  base_lateral:      { x: -210, y: -130 },
-  abertura:          { x:  210, y: -130 },
-  giros:             { x:  300, y:   70 },
-  dama_costas:       { x: -200, y:  150 },
-  pendulos:          { x:   50, y:  280 },
-  movimentos_corpo:  { x: -320, y:   40 },
-  conexoes_estilo:   { x:   50, y: -280 },
-  finalizacao:       { x:  240, y:  220 },
+const HUB_R = 46
+const SAT_R = 18
+const SAT_RING_R = 220
+
+interface Layout {
+  positions: Record<string, { x: number; y: number }>
+  hubIds: Set<string>
+  /** All step ids that should be drawn as nodes (hubs + satellites). */
+  nodeIds: string[]
 }
 
-function resolvePositions(hubs: HubWithSteps[]): Record<string, { x: number; y: number }> {
-  const allKnown = hubs.every((h) => h.id in ZOUK_POSITIONS)
-  if (allKnown && hubs.length > 0) return ZOUK_POSITIONS
+function buildLayout(hubs: Hub[], steps: DanceStep[]): Layout {
+  const hubIds = new Set(hubs.map((h) => h.stepId))
+  const positions: Record<string, { x: number; y: number }> = {}
 
-  const sorted = [...hubs].sort((a, b) => b.difficulty - a.difficulty)
-  const center = sorted[0]
-  const others = sorted.slice(1)
-  const radius = 250
-  const result: Record<string, { x: number; y: number }> = {
-    [center.id]: { x: 0, y: 0 },
-  }
-  others.forEach((hub, i) => {
-    const angle = (2 * Math.PI * i) / others.length - Math.PI / 2
-    result[hub.id] = {
-      x: Math.round(Math.cos(angle) * radius),
-      y: Math.round(Math.sin(angle) * radius),
+  // 1. Place hubs
+  const allKnown = hubs.length > 0 && hubs.every((h) => h.stepId in ZOUK_HUB_POSITIONS)
+  if (allKnown) {
+    hubs.forEach((h) => { positions[h.stepId] = ZOUK_HUB_POSITIONS[h.stepId] })
+  } else {
+    const byDifficulty = [...hubs].sort((a, b) => {
+      const da = steps.find((s) => s.id === a.stepId)?.difficulty ?? 0
+      const db = steps.find((s) => s.id === b.stepId)?.difficulty ?? 0
+      return db - da
+    })
+    if (byDifficulty.length > 0) {
+      const center = byDifficulty[0]
+      const others = byDifficulty.slice(1)
+      const radius = 480
+      positions[center.stepId] = { x: 0, y: 0 }
+      others.forEach((hub, i) => {
+        const angle = (2 * Math.PI * i) / others.length - Math.PI / 2
+        positions[hub.stepId] = {
+          x: Math.round(Math.cos(angle) * radius),
+          y: Math.round(Math.sin(angle) * radius),
+        }
+      })
     }
-  })
-  return result
-}
+  }
 
-const HUB_R  = 46
-const ORBIT  = 86
-
-function stepPositions(
-  hub: { x: number; y: number },
-  count: number,
-): { x: number; y: number }[] {
-  if (count === 0) return []
-  const baseAngle = Math.atan2(hub.y, hub.x) + Math.PI
-  const spread = count === 1 ? 0 : (Math.PI * 0.65) / (count - 1)
-  const startAngle = baseAngle - (spread * (count - 1)) / 2
-  return Array.from({ length: count }, (_, i) => {
-    const a = startAngle + spread * i
-    return { x: hub.x + Math.cos(a) * ORBIT, y: hub.y + Math.sin(a) * ORBIT }
+  // 2. Assign each non-hub step to its primary hub (first hub that references it)
+  const satellitesByHub: Record<string, string[]> = {}
+  const assigned = new Set<string>()
+  hubs.forEach((hub) => {
+    const all = [...hub.outgoingSteps, ...hub.incomingSteps]
+    all.forEach((stepId) => {
+      if (hubIds.has(stepId)) return
+      if (assigned.has(stepId)) return
+      assigned.add(stepId)
+      if (!satellitesByHub[hub.stepId]) satellitesByHub[hub.stepId] = []
+      satellitesByHub[hub.stepId].push(stepId)
+    })
   })
+
+  // 3. Place satellites in a ring around their primary hub.
+  // Skew the ring so it points away from the centroid of other hubs (to reduce edge crossings).
+  const hubsCentroid = hubs.reduce((acc, h) => {
+    const p = positions[h.stepId] ?? { x: 0, y: 0 }
+    return { x: acc.x + p.x, y: acc.y + p.y }
+  }, { x: 0, y: 0 })
+  hubsCentroid.x /= Math.max(1, hubs.length)
+  hubsCentroid.y /= Math.max(1, hubs.length)
+
+  Object.entries(satellitesByHub).forEach(([hubId, stepIds]) => {
+    const hubPos = positions[hubId]
+    if (!hubPos) return
+    const count = stepIds.length
+    // Direction pointing AWAY from the centroid → satellites lean outward
+    const dx = hubPos.x - hubsCentroid.x
+    const dy = hubPos.y - hubsCentroid.y
+    const baseAngle = Math.atan2(dy, dx)
+    // Spread satellites across an arc opposite to the centroid (3/4 of a circle)
+    const arc = count > 1 ? (Math.PI * 1.5) : 0
+    stepIds.forEach((id, i) => {
+      const t = count === 1 ? 0 : (i / (count - 1)) - 0.5
+      const angle = baseAngle + t * arc
+      positions[id] = {
+        x: hubPos.x + Math.cos(angle) * SAT_RING_R,
+        y: hubPos.y + Math.sin(angle) * SAT_RING_R,
+      }
+    })
+  })
+
+  const nodeIds = [...hubs.map((h) => h.stepId), ...Array.from(assigned)]
+  return { positions, hubIds, nodeIds }
 }
 
 function bezierCP(
@@ -88,7 +142,7 @@ function edgeTip(
   return { x: to.x - (dx / len) * offset, y: to.y - (dy / len) * offset }
 }
 
-// ── Video Card (HTML overlay) ─────────────────────────────────────────────────
+// ── Video tooltip (HTML overlay) ──────────────────────────────────────────────
 
 interface TooltipState {
   step: DanceStep
@@ -97,13 +151,7 @@ interface TooltipState {
   pinned: boolean
 }
 
-function VideoTooltip({
-  state,
-  onClose,
-}: {
-  state: TooltipState
-  onClose: () => void
-}) {
+function VideoTooltip({ state, onClose }: { state: TooltipState; onClose: () => void }) {
   const { step, screenX, screenY, pinned } = state
   const thumb = getVideoThumbnail(step)
   const firstYT = step.youtubeVideos.find((id) => id !== '')
@@ -148,10 +196,7 @@ function VideoTooltip({
             {step.duration}
           </span>
           {!pinned && (
-            <div style={{
-              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(26,29,59,0.08)',
-            }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,29,59,0.08)' }}>
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(245,166,35,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#ffffff"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A.998.998 0 0 0 8 6.82z"/></svg>
               </div>
@@ -170,21 +215,11 @@ function VideoTooltip({
           ))}
           <span style={{ fontFamily: DM, fontSize: '9px', color: 'rgba(26,29,59,0.4)', marginLeft: '5px' }}>Nível</span>
         </div>
-
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {hasYT && (
             <button
               onClick={(e) => { e.stopPropagation() }}
-              style={{
-                flex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                padding: '7px 10px', borderRadius: '4px', border: 'none',
-                background: pinned ? 'rgba(26,29,59,0.06)' : '#f5a623',
-                color: pinned ? 'rgba(26,29,59,0.5)' : '#ffffff',
-                fontFamily: DM, fontSize: '10px', fontWeight: 700,
-                letterSpacing: '0.15em', textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 10px', borderRadius: '4px', border: 'none', background: pinned ? 'rgba(26,29,59,0.06)' : '#f5a623', color: pinned ? 'rgba(26,29,59,0.5)' : '#ffffff', fontFamily: DM, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer' }}
             >
               {pinned ? (
                 <><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Parar</>
@@ -193,41 +228,24 @@ function VideoTooltip({
               )}
             </button>
           )}
-
           <a
             href={`#/video/${step.id}`}
-            style={{
-              flex: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-              padding: '7px 10px', borderRadius: '4px',
-              border: '1px solid rgba(245,166,35,0.4)',
-              background: 'transparent', color: '#f5a623',
-              fontFamily: DM, fontSize: '10px', fontWeight: 700,
-              letterSpacing: '0.15em', textTransform: 'uppercase',
-              textDecoration: 'none',
-            }}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 10px', borderRadius: '4px', border: '1px solid rgba(245,166,35,0.4)', background: 'transparent', color: '#f5a623', fontFamily: DM, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none' }}
           >
             Abrir
             <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
             </svg>
           </a>
-
           {pinned && (
             <button
               onClick={(e) => { e.stopPropagation(); onClose() }}
-              style={{
-                width: 30, height: 30, borderRadius: '4px', border: '1px solid rgba(26,29,59,0.12)',
-                background: 'transparent', color: 'rgba(26,29,59,0.4)',
-                fontFamily: DM, fontSize: '13px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
+              style={{ width: 30, height: 30, borderRadius: '4px', border: '1px solid rgba(26,29,59,0.12)', background: 'transparent', color: 'rgba(26,29,59,0.4)', fontFamily: DM, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               ✕
             </button>
           )}
         </div>
-
         {!pinned && (
           <p style={{ fontFamily: DM, fontSize: '9px', letterSpacing: '0.14em', color: 'rgba(26,29,59,0.35)', textTransform: 'uppercase', marginTop: '8px' }}>
             Clique no nó para fixar
@@ -243,29 +261,85 @@ function VideoTooltip({
 interface FlowMapGraphProps {
   hubs: Hub[]
   steps: DanceStep[]
+  flows: Flow[]
+  styleId: string
 }
 
-export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
+export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [center, setCenter] = useState({ x: 560, y: 340 })
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
-  const [selectedHub, setSelectedHub] = useState<HubId | null>(null)
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.75 })
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null)
-  const [showSteps, setShowSteps]     = useState(true)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const dragging = useRef(false)
   const lastPos = useRef({ x: 0, y: 0 })
 
-  // Enrich hubs with their member step IDs
-  const hubs: HubWithSteps[] = rawHubs.map((hub) => ({
-    ...hub,
-    stepIds: steps.filter((s) => s.hubs?.includes(hub.id)).map((s) => s.id),
-  }))
+  // ── Flow selection / builder state ────────────────────────────────────────
+  const [customFlows, setCustomFlows] = useState<Flow[]>(() => loadCustomFlows(styleId))
+  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null)
+  const [builderMode, setBuilderMode] = useState(false)
+  const [draftSequence, setDraftSequence] = useState<string[]>([])
+  const [draftName, setDraftName] = useState('')
+  const [draftDifficulty, setDraftDifficulty] = useState<Level>(2)
 
-  // Derive edges from hub.outgoingSteps
-  const connections = hubs.flatMap((hub) =>
-    hub.outgoingSteps.map((toHubId) => ({ fromHub: hub.id, toHub: toHubId })),
-  )
+  useEffect(() => {
+    setCustomFlows(loadCustomFlows(styleId))
+    setSelectedFlowId(null)
+    setBuilderMode(false)
+    setDraftSequence([])
+    setDraftName('')
+  }, [styleId])
+
+  const allFlows: Flow[] = useMemo(() => [...flows, ...customFlows], [flows, customFlows])
+  const selectedFlow = selectedFlowId ? allFlows.find((f) => f.id === selectedFlowId) ?? null : null
+
+  // The "active" sequence drives highlighting — either the selected flow or the draft being built
+  const activeSequence: string[] = builderMode ? draftSequence : (selectedFlow?.sequence ?? [])
+  const activeSequenceSet = useMemo(() => new Set(activeSequence), [activeSequence])
+
+  // Map of stepId → all 1-based positions it occupies in the active sequence (for badges)
+  const sequencePositions = useMemo(() => {
+    const map: Record<string, number[]> = {}
+    activeSequence.forEach((id, i) => {
+      if (!map[id]) map[id] = []
+      map[id].push(i + 1)
+    })
+    return map
+  }, [activeSequence])
+
+  // Edges that are part of the active flow path (consecutive pairs)
+  const flowEdgeSet = useMemo(() => {
+    const s = new Set<string>()
+    for (let i = 0; i < activeSequence.length - 1; i++) {
+      s.add(`${activeSequence[i]}->${activeSequence[i + 1]}`)
+    }
+    return s
+  }, [activeSequence])
+
+  const getStep = useCallback((stepId: string) => steps.find((s) => s.id === stepId), [steps])
+
+  const layout = useMemo(() => buildLayout(hubs, steps), [hubs, steps])
+  const { positions, hubIds, nodeIds } = layout
+
+  // Derive edges from BOTH outgoing and incoming, deduped.
+  // outgoing: hub → step (could be hub or satellite)
+  // incoming: step → hub (covers satellite → hub edges that the satellite can't declare)
+  const connections = useMemo(() => {
+    const seen = new Set<string>()
+    const list: { from: string; to: string }[] = []
+    hubs.forEach((hub) => {
+      hub.outgoingSteps.forEach((toId) => {
+        const k = `${hub.stepId}->${toId}`
+        if (!seen.has(k)) { seen.add(k); list.push({ from: hub.stepId, to: toId }) }
+      })
+      hub.incomingSteps.forEach((fromId) => {
+        const k = `${fromId}->${hub.stepId}`
+        if (!seen.has(k)) { seen.add(k); list.push({ from: fromId, to: hub.stepId }) }
+      })
+    })
+    return list
+  }, [hubs])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -273,16 +347,15 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
     setCenter({ x: r.width / 2, y: r.height / 2 })
   }, [])
 
-  const selectedData = selectedHub ? hubs.find((h) => h.id === selectedHub) ?? null : null
-  const outgoing = selectedHub ? connections.filter((c) => c.fromHub === selectedHub) : []
-  const incoming = selectedHub ? connections.filter((c) => c.toHub === selectedHub) : []
-
-  const positions = resolvePositions(hubs)
+  const selectedHub = selectedStepId ? hubs.find((h) => h.stepId === selectedStepId) ?? null : null
+  const selectedStep = selectedStepId ? getStep(selectedStepId) ?? null : null
+  const outgoing = selectedStepId ? connections.filter((c) => c.from === selectedStepId) : []
+  const incoming = selectedStepId ? connections.filter((c) => c.to === selectedStepId) : []
 
   const [isDragging, setIsDragging] = useState(false)
 
   const onMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if ((e.target as Element).closest('.hub-node, .step-node')) return
+    if ((e.target as Element).closest('.graph-node')) return
     dragging.current = true
     setIsDragging(true)
     lastPos.current = { x: e.clientX, y: e.clientY }
@@ -310,7 +383,7 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
     }))
   }, [])
 
-  const panelWidth = selectedData ? 300 : 0
+  const panelWidth = selectedStep ? 300 : 0
 
   const showTooltip = useCallback((stepId: string, e: React.MouseEvent) => {
     const step = getVideoById(stepId)
@@ -326,7 +399,6 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
     setTooltip((prev) => prev?.pinned ? prev : null)
   }, [])
   const pinTooltip = useCallback((stepId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
     const step = getVideoById(stepId)
     if (!step) return
     setTooltip((prev) =>
@@ -336,16 +408,93 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
     )
   }, [])
 
+  // Determine if a node is "related" to the selected one (directly connected)
+  const isRelatedToSelected = useCallback((stepId: string) => {
+    if (!selectedStepId || stepId === selectedStepId) return false
+    return outgoing.some((c) => c.to === stepId) || incoming.some((c) => c.from === stepId)
+  }, [selectedStepId, outgoing, incoming])
+
+  // ── Flow selector / builder handlers ──────────────────────────────────────
+  const handleSelectFlow = useCallback((flowId: string | null) => {
+    setSelectedFlowId(flowId)
+    setSelectedStepId(null)
+    setTooltip(null)
+  }, [])
+
+  const enterBuilder = useCallback(() => {
+    setBuilderMode(true)
+    setSelectedFlowId(null)
+    setSelectedStepId(null)
+    setTooltip(null)
+    setDraftSequence([])
+    setDraftName('')
+    setDraftDifficulty(2)
+  }, [])
+
+  const exitBuilder = useCallback(() => {
+    setBuilderMode(false)
+    setDraftSequence([])
+    setDraftName('')
+  }, [])
+
+  const addToDraft = useCallback((stepId: string) => {
+    setDraftSequence((seq) => [...seq, stepId])
+  }, [])
+
+  const removeFromDraftAt = useCallback((index: number) => {
+    setDraftSequence((seq) => seq.filter((_, i) => i !== index))
+  }, [])
+
+  const saveDraft = useCallback(() => {
+    if (draftSequence.length < 2 || !draftName.trim()) return
+    const newFlow: Flow = {
+      id: `custom-${Date.now()}`,
+      name: draftName.trim(),
+      description: 'Flow personalizado',
+      difficulty: draftDifficulty,
+      sequence: [...draftSequence],
+    }
+    const next = [...customFlows, newFlow]
+    setCustomFlows(next)
+    saveCustomFlows(styleId, next)
+    setBuilderMode(false)
+    setDraftSequence([])
+    setDraftName('')
+    setSelectedFlowId(newFlow.id)
+  }, [draftSequence, draftName, draftDifficulty, customFlows, styleId])
+
+  const deleteCustomFlow = useCallback((flowId: string) => {
+    const next = customFlows.filter((f) => f.id !== flowId)
+    setCustomFlows(next)
+    saveCustomFlows(styleId, next)
+    if (selectedFlowId === flowId) setSelectedFlowId(null)
+  }, [customFlows, styleId, selectedFlowId])
+
+  // Click on a node — different behavior based on mode
+  const handleNodeClick = useCallback((stepId: string, e: React.MouseEvent) => {
+    if (builderMode) {
+      addToDraft(stepId)
+      return
+    }
+    setSelectedStepId((prev) => (prev === stepId ? null : stepId))
+    pinTooltipFromEvent(stepId, e)
+  }, [builderMode, addToDraft])
+
+  // Helper for pin (defined later below in original code — we redeclare to avoid TDZ)
+  function pinTooltipFromEvent(stepId: string, e: React.MouseEvent) {
+    const step = getVideoById(stepId)
+    if (!step) return
+    setTooltip((prev) =>
+      prev?.pinned && prev.step.id === stepId
+        ? null
+        : { step, screenX: e.clientX, screenY: e.clientY, pinned: true }
+    )
+  }
+
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        background: '#f0f4ff',
-      }}
+      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#f0f4ff' }}
     >
       <svg
         width="100%"
@@ -382,61 +531,37 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
           <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
             <feDropShadow dx="0" dy="3" stdDeviation="7" floodColor="#1a1d3b" floodOpacity="0.12" />
           </filter>
-          <filter id="step-shadow" x="-35%" y="-35%" width="170%" height="170%">
-            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#1a1d3b" floodOpacity="0.1" />
-          </filter>
         </defs>
 
         <g transform={`translate(${center.x + transform.x - panelWidth / 2}, ${center.y + transform.y}) scale(${transform.scale})`}>
-          <rect x="-2000" y="-1500" width="4000" height="3000" fill="url(#grid)" />
-
-          {/* Step spokes */}
-          {showSteps && hubs.map((hub) => {
-            const pos  = positions[hub.id] ?? { x: 0, y: 0 }
-            const sPos = stepPositions(pos, hub.stepIds.length)
-            const isDimmedHub = selectedHub !== null && selectedHub !== hub.id
-            return hub.stepIds.map((_, si) => {
-              const sp = sPos[si]
-              return (
-                <line
-                  key={`spoke-${hub.id}-${si}`}
-                  x1={pos.x} y1={pos.y} x2={sp.x} y2={sp.y}
-                  stroke={hub.color}
-                  strokeWidth={0.7}
-                  strokeOpacity={isDimmedHub ? 0.04 : 0.18}
-                  style={{ transition: 'stroke-opacity 0.25s' }}
-                />
-              )
-            })
-          })}
+          <rect x="-3000" y="-2500" width="6000" height="5000" fill="url(#grid)" />
 
           {/* Edges */}
           {connections.map((conn, i) => {
-            const from = positions[conn.fromHub] ?? { x: 0, y: 0 }
-            const to   = positions[conn.toHub]   ?? { x: 0, y: 0 }
-            const isSelf  = conn.fromHub === conn.toHub
-            const isHover = hoveredEdge === i
-            const isRelated =
-              selectedHub !== null &&
-              (conn.fromHub === selectedHub || conn.toHub === selectedHub)
+            const from = positions[conn.from] ?? { x: 0, y: 0 }
+            const to   = positions[conn.to]   ?? { x: 0, y: 0 }
+            const isSelf    = conn.from === conn.to
+            const isHover   = hoveredEdge === i
+            const isRelated = selectedStepId !== null && (conn.from === selectedStepId || conn.to === selectedStepId)
             const active = isHover || isRelated
             const stroke = active ? '#f5a623' : 'rgba(26,29,59,0.18)'
-            const sw = active ? 2 : 1
+            const sw     = active ? 2 : 1
             const marker = active ? 'url(#arr-hi)' : 'url(#arr)'
-            const dash = active ? undefined : '5 4'
+            const dash   = active ? undefined : '5 4'
+            const targetR = hubIds.has(conn.to) ? HUB_R : SAT_R
 
             if (isSelf) {
               const lx = from.x, ly = from.y
               return (
                 <g key={i} onMouseEnter={() => setHoveredEdge(i)} onMouseLeave={() => setHoveredEdge(null)} style={{ cursor: 'pointer' }}>
-                  <path d={`M ${lx - 30} ${ly - 38} C ${lx - 100} ${ly - 140} ${lx + 100} ${ly - 140} ${lx + 30} ${ly - 38}`} fill="none" stroke={stroke} strokeWidth={sw} strokeDasharray={dash} markerEnd={marker} style={{ transition: 'stroke 0.2s' }} />
-                  <path d={`M ${lx - 30} ${ly - 38} C ${lx - 100} ${ly - 140} ${lx + 100} ${ly - 140} ${lx + 30} ${ly - 38}`} fill="none" stroke="transparent" strokeWidth={16} />
+                  <path d={`M ${lx-30} ${ly-38} C ${lx-100} ${ly-140} ${lx+100} ${ly-140} ${lx+30} ${ly-38}`} fill="none" stroke={stroke} strokeWidth={sw} strokeDasharray={dash} markerEnd={marker} style={{ transition: 'stroke 0.2s' }} />
+                  <path d={`M ${lx-30} ${ly-38} C ${lx-100} ${ly-140} ${lx+100} ${ly-140} ${lx+30} ${ly-38}`} fill="none" stroke="transparent" strokeWidth={16} />
                 </g>
               )
             }
 
-            const cp  = bezierCP(from, to, 55)
-            const tip = edgeTip(cp, to, HUB_R + 5)
+            const cp  = bezierCP(from, to, 35)
+            const tip = edgeTip(cp, to, targetR + 4)
 
             return (
               <g key={i} onMouseEnter={() => setHoveredEdge(i)} onMouseLeave={() => setHoveredEdge(null)} style={{ cursor: 'pointer' }}>
@@ -446,55 +571,96 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
             )
           })}
 
-          {/* Hub nodes */}
-          {hubs.map((hub) => {
-            const pos        = positions[hub.id] ?? { x: 0, y: 0 }
-            const isSelected = selectedHub === hub.id
-            const isRelated  =
-              selectedHub !== null &&
-              (outgoing.some((c) => c.toHub === hub.id) || incoming.some((c) => c.fromHub === hub.id))
-            const isDimmed = selectedHub !== null && !isSelected && !isRelated
+          {/* Satellite step nodes — render before hubs so hubs sit on top */}
+          {nodeIds.filter((id) => !hubIds.has(id)).map((stepId) => {
+            const pos        = positions[stepId] ?? { x: 0, y: 0 }
+            const step       = getStep(stepId)
+            const label      = step?.name ?? stepId
+            const isSelected = selectedStepId === stepId
+            const isRelated  = isRelatedToSelected(stepId)
+            const isDimmed   = selectedStepId !== null && !isSelected && !isRelated
 
             return (
-              <g key={hub.id} className="hub-node" transform={`translate(${pos.x}, ${pos.y})`} onClick={() => setSelectedHub(isSelected ? null : hub.id)} style={{ cursor: 'pointer' }}>
-                {isSelected && <circle r={64} fill="none" stroke="#f5a623" strokeWidth={0.8} opacity={0.3} filter="url(#glow)" />}
-                {isRelated  && <circle r={54} fill="none" stroke="rgba(245,166,35,0.35)" strokeWidth={1} />}
-                <circle r={HUB_R} fill={isSelected ? 'url(#ng-sel)' : 'url(#ng)'} stroke={isSelected ? '#f5a623' : isRelated ? 'rgba(245,166,35,0.4)' : 'rgba(26,29,59,0.15)'} strokeWidth={isSelected ? 1.5 : 1} opacity={isDimmed ? 0.22 : 1} filter="url(#shadow)" style={{ transition: 'all 0.25s' }} />
-                <circle cx={30} cy={-30} r={5} fill={hub.color} opacity={isDimmed ? 0.2 : 0.9} style={{ transition: 'opacity 0.25s' }} />
-                <text textAnchor="middle" y={-4} fontSize="22" opacity={isDimmed ? 0.2 : 1} style={{ userSelect: 'none', pointerEvents: 'none', transition: 'opacity 0.25s' }}>{hub.icon}</text>
-                <foreignObject x={-40} y={16} width={80} height={34} style={{ pointerEvents: 'none', overflow: 'visible' }}>
-                  <div style={{ fontFamily: DM, fontSize: '8.5px', fontWeight: 600, letterSpacing: '0.02em', color: isSelected ? '#f5a623' : isRelated ? 'rgba(26,29,59,0.85)' : 'rgba(26,29,59,0.5)', textAlign: 'center', lineHeight: 1.25, opacity: isDimmed ? 0.2 : 1, transition: 'color 0.25s, opacity 0.25s', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {hub.name}
+              <g
+                key={stepId}
+                className="graph-node"
+                transform={`translate(${pos.x}, ${pos.y})`}
+                onClick={(e) => {
+                  setSelectedStepId(isSelected ? null : stepId)
+                  pinTooltip(stepId, e as unknown as React.MouseEvent)
+                }}
+                onMouseEnter={(e) => showTooltip(stepId, e as unknown as React.MouseEvent)}
+                onMouseMove={moveTooltip as unknown as React.MouseEventHandler<SVGGElement>}
+                onMouseLeave={hideTooltip}
+                style={{ cursor: 'pointer' }}
+              >
+                {isSelected && <circle r={32} fill="none" stroke="#f5a623" strokeWidth={0.8} opacity={0.4} filter="url(#glow)" />}
+                <circle
+                  r={SAT_R}
+                  fill={isSelected ? 'url(#ng-sel)' : 'url(#ng)'}
+                  stroke={isSelected ? '#f5a623' : isRelated ? 'rgba(245,166,35,0.5)' : 'rgba(26,29,59,0.18)'}
+                  strokeWidth={isSelected ? 1.5 : 0.8}
+                  opacity={isDimmed ? 0.25 : 1}
+                  filter="url(#shadow)"
+                  style={{ transition: 'all 0.25s' }}
+                />
+                {step && (
+                  <circle cx={11} cy={-11} r={3} fill={step.difficulty >= 4 ? '#ef4444' : step.difficulty >= 2 ? '#f5a623' : '#10b981'} opacity={isDimmed ? 0.2 : 0.85} />
+                )}
+                <foreignObject x={-58} y={SAT_R + 2} width={116} height={32} style={{ pointerEvents: 'none', overflow: 'visible' }}>
+                  <div style={{ fontFamily: DM, fontSize: '8px', fontWeight: 500, letterSpacing: '0.01em', color: isSelected ? '#f5a623' : isRelated ? 'rgba(26,29,59,0.78)' : 'rgba(26,29,59,0.55)', textAlign: 'center', lineHeight: 1.2, opacity: isDimmed ? 0.25 : 1, transition: 'color 0.25s, opacity 0.25s', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {label}
                   </div>
                 </foreignObject>
               </g>
             )
           })}
 
-          {/* Step nodes */}
-          {showSteps && hubs.map((hub) => {
-            const pos  = positions[hub.id] ?? { x: 0, y: 0 }
-            const sPos = stepPositions(pos, hub.stepIds.length)
-            const isDimmedHub = selectedHub !== null && selectedHub !== hub.id
-            const W = 28, H = 28
-            return hub.stepIds.map((stepId, si) => {
-              const sp   = sPos[si]
-              const step = getVideoById(stepId)
-              if (!step) return null
-              return (
-                <g key={`step-${hub.id}-${stepId}`} className="step-node" transform={`translate(${sp.x - W / 2}, ${sp.y - H / 2})`} opacity={isDimmedHub ? 0.08 : 1} style={{ cursor: 'pointer', transition: 'opacity 0.25s' }}
-                  onMouseEnter={(e) => showTooltip(stepId, e as unknown as React.MouseEvent)}
-                  onMouseMove={moveTooltip as unknown as React.MouseEventHandler<SVGGElement>}
-                  onMouseLeave={hideTooltip}
-                  onClick={(e) => pinTooltip(stepId, e as unknown as React.MouseEvent)}
-                >
-                  <rect width={W} height={H} rx={4} ry={4} fill="#ffffff" stroke={hub.color} strokeWidth={1} strokeOpacity={0.5} filter="url(#step-shadow)" />
-                  <rect x={2} y={H - 5} width={W - 4} height={3} rx={2} fill={hub.color} opacity={0.1} />
-                  <rect x={2} y={H - 5} width={(W - 4) * (step.difficulty / 5)} height={3} rx={2} fill={hub.color} opacity={0.7} />
-                  <polygon points={`${W/2-4},${H/2-5} ${W/2-4},${H/2+5} ${W/2+6},${H/2}`} fill={hub.color} opacity={0.65} />
-                </g>
-              )
-            })
+          {/* Hub nodes */}
+          {hubs.map((hub) => {
+            const pos        = positions[hub.stepId] ?? { x: 0, y: 0 }
+            const step       = getStep(hub.stepId)
+            const label      = step?.name ?? hub.stepId
+            const isSelected = selectedStepId === hub.stepId
+            const isRelated  = isRelatedToSelected(hub.stepId)
+            const isDimmed   = selectedStepId !== null && !isSelected && !isRelated
+
+            return (
+              <g
+                key={hub.stepId}
+                className="graph-node"
+                transform={`translate(${pos.x}, ${pos.y})`}
+                onClick={(e) => {
+                  setSelectedStepId(isSelected ? null : hub.stepId)
+                  pinTooltip(hub.stepId, e as unknown as React.MouseEvent)
+                }}
+                onMouseEnter={(e) => showTooltip(hub.stepId, e as unknown as React.MouseEvent)}
+                onMouseMove={moveTooltip as unknown as React.MouseEventHandler<SVGGElement>}
+                onMouseLeave={hideTooltip}
+                style={{ cursor: 'pointer' }}
+              >
+                {isSelected && <circle r={64} fill="none" stroke="#f5a623" strokeWidth={0.8} opacity={0.3} filter="url(#glow)" />}
+                {isRelated  && <circle r={54} fill="none" stroke="rgba(245,166,35,0.35)" strokeWidth={1} />}
+                <circle
+                  r={HUB_R}
+                  fill={isSelected ? 'url(#ng-sel)' : 'url(#ng)'}
+                  stroke={isSelected ? '#f5a623' : isRelated ? 'rgba(245,166,35,0.4)' : 'rgba(26,29,59,0.15)'}
+                  strokeWidth={isSelected ? 1.5 : 1}
+                  opacity={isDimmed ? 0.22 : 1}
+                  filter="url(#shadow)"
+                  style={{ transition: 'all 0.25s' }}
+                />
+                <circle cx={30} cy={-30} r={5} fill={hub.color} opacity={isDimmed ? 0.2 : 0.9} style={{ transition: 'opacity 0.25s' }} />
+                <text textAnchor="middle" y={-4} fontSize="22" opacity={isDimmed ? 0.2 : 1} style={{ userSelect: 'none', pointerEvents: 'none', transition: 'opacity 0.25s' }}>
+                  {hub.icon}
+                </text>
+                <foreignObject x={-50} y={16} width={100} height={34} style={{ pointerEvents: 'none', overflow: 'visible' }}>
+                  <div style={{ fontFamily: DM, fontSize: '9px', fontWeight: 700, letterSpacing: '0.02em', color: isSelected ? '#f5a623' : isRelated ? 'rgba(26,29,59,0.85)' : 'rgba(26,29,59,0.6)', textAlign: 'center', lineHeight: 1.25, opacity: isDimmed ? 0.2 : 1, transition: 'color 0.25s, opacity 0.25s', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {label}
+                  </div>
+                </foreignObject>
+              </g>
+            )
           })}
         </g>
       </svg>
@@ -502,76 +668,64 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
       {tooltip && <VideoTooltip state={tooltip} onClose={() => setTooltip(null)} />}
 
       <div style={{ position: 'absolute', bottom: 18, left: `calc(50% - ${panelWidth / 2}px)`, transform: 'translateX(-50%)', fontFamily: DM, fontSize: '10px', letterSpacing: '0.18em', color: 'rgba(26,29,59,0.35)', textTransform: 'uppercase', pointerEvents: 'none', whiteSpace: 'nowrap', transition: 'left 0.3s' }}>
-        Arraste · Scroll zoom · Hub = clique · Passo ▶ = hover / clique para fixar
+        Arraste · Scroll zoom · Clique no nó para detalhes
       </div>
 
       <div style={{ position: 'absolute', bottom: 18, right: panelWidth + 16, display: 'flex', flexDirection: 'column', gap: '4px', transition: 'right 0.3s' }}>
-        <button onClick={() => setShowSteps((v) => !v)} title={showSteps ? 'Ocultar camada de passos' : 'Mostrar camada de passos'} style={{ width: 32, height: 32, background: showSteps ? 'rgba(245,166,35,0.12)' : 'rgba(26,29,59,0.04)', border: `1px solid ${showSteps ? 'rgba(245,166,35,0.45)' : 'rgba(26,29,59,0.12)'}`, borderRadius: '4px', color: showSteps ? '#f5a623' : 'rgba(26,29,59,0.4)', fontFamily: DM, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>▶</button>
-        <div style={{ height: '1px', background: 'rgba(26,29,59,0.1)', margin: '2px 0' }} />
         {([
           { label: '+', fn: () => setTransform((t) => ({ ...t, scale: Math.min(3.5, t.scale * 1.2) })) },
           { label: '−', fn: () => setTransform((t) => ({ ...t, scale: Math.max(0.2, t.scale / 1.2) })) },
-          { label: '⌂', fn: () => setTransform({ x: 0, y: 0, scale: 1 }) },
+          { label: '⌂', fn: () => setTransform({ x: 0, y: 0, scale: 0.75 }) },
         ] as const).map(({ label, fn }) => (
           <button key={label} onClick={fn} style={{ width: 32, height: 32, background: 'rgba(26,29,59,0.04)', border: '1px solid rgba(26,29,59,0.12)', borderRadius: '4px', color: 'rgba(26,29,59,0.55)', fontFamily: DM, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>
         ))}
       </div>
 
       {/* Details panel */}
-      {selectedData && (
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: `${panelWidth}px`, background: '#ffffff', borderLeft: '1px solid #dde3f5', display: 'flex', flexDirection: 'column', gap: 0, overflowY: 'auto' }}>
+      {selectedStep && (
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: `${panelWidth}px`, background: '#ffffff', borderLeft: '1px solid #dde3f5', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid #dde3f5' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '30px' }}>{selectedData.icon}</span>
+                {selectedHub && <span style={{ fontSize: '30px' }}>{selectedHub.icon}</span>}
                 <div>
-                  <h3 style={{ fontFamily: SERIF, fontSize: '15px', fontWeight: 700, color: '#1a1d3b', letterSpacing: '-0.01em', lineHeight: 1.2 }}>{selectedData.name}</h3>
+                  <h3 style={{ fontFamily: DM, fontSize: '15px', fontWeight: 700, color: '#1a1d3b', letterSpacing: '-0.01em', lineHeight: 1.2 }}>{selectedStep.name}</h3>
                   <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
                     {Array.from({ length: 5 }, (_, k) => (
-                      <div key={k} style={{ width: 14, height: 3, borderRadius: 2, background: k < selectedData.difficulty ? '#f5a623' : 'rgba(26,29,59,0.1)' }} />
+                      <div key={k} style={{ width: 14, height: 3, borderRadius: 2, background: k < selectedStep.difficulty ? '#f5a623' : 'rgba(26,29,59,0.1)' }} />
                     ))}
                   </div>
                 </div>
               </div>
-              <button onClick={() => setSelectedHub(null)} style={{ background: 'none', border: 'none', color: 'rgba(26,29,59,0.35)', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>✕</button>
+              <button onClick={() => setSelectedStepId(null)} style={{ background: 'none', border: 'none', color: 'rgba(26,29,59,0.35)', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>✕</button>
             </div>
-            <p style={{ fontFamily: DM, fontSize: '12px', color: 'rgba(26,29,59,0.6)', lineHeight: 1.7, margin: 0 }}>{selectedData.description}</p>
-            <p style={{ fontFamily: DM, fontSize: '11px', fontStyle: 'italic', color: 'rgba(26,29,59,0.38)', lineHeight: 1.6, marginTop: '8px' }}>"{selectedData.notes}"</p>
+            <p style={{ fontFamily: DM, fontSize: '12px', color: 'rgba(26,29,59,0.6)', lineHeight: 1.7, margin: 0 }}>{selectedStep.description}</p>
+            {selectedHub?.notes && (
+              <p style={{ fontFamily: DM, fontSize: '11px', fontStyle: 'italic', color: 'rgba(26,29,59,0.38)', lineHeight: 1.6, marginTop: '8px' }}>"{selectedHub.notes}"</p>
+            )}
+            <Link
+              to={`/video/${selectedStep.id}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '14px', fontFamily: DM, fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#f5a623', textDecoration: 'none' }}
+            >
+              Ver passo
+              <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+              </svg>
+            </Link>
           </div>
-
-          {selectedData.stepIds.length > 0 && (
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #dde3f5' }}>
-              <p style={{ fontFamily: DM, fontSize: '9px', letterSpacing: '0.3em', color: '#f5a623', fontWeight: 600, textTransform: 'uppercase', marginBottom: '10px' }}>
-                Passos ({selectedData.stepIds.length})
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {selectedData.stepIds.map((sid) => {
-                  const step = getVideoById(sid)
-                  if (!step) return null
-                  return (
-                    <Link key={sid} to={`/video/${sid}`} style={{ fontFamily: DM, fontSize: '12px', color: 'rgba(26,29,59,0.65)', padding: '7px 11px', borderRadius: '4px', border: '1px solid rgba(26,29,59,0.1)', textDecoration: 'none', transition: 'all 0.15s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.5)'; e.currentTarget.style.color = '#f5a623' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(26,29,59,0.1)'; e.currentTarget.style.color = 'rgba(26,29,59,0.65)' }}
-                    >
-                      {step.name}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
           {outgoing.length > 0 && (
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #dde3f5' }}>
               <p style={{ fontFamily: DM, fontSize: '9px', letterSpacing: '0.3em', color: 'rgba(26,29,59,0.45)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '10px' }}>Vai para</p>
               {outgoing.map((conn, i) => {
-                const toHub = hubs.find((h) => h.id === conn.toHub)
+                const toHub  = hubs.find((h) => h.stepId === conn.to)
+                const toStep = getStep(conn.to)
                 return (
-                  <div key={i} onClick={() => setSelectedHub(conn.toHub as HubId)} style={{ padding: '10px 12px', borderRadius: '5px', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', marginBottom: '5px', cursor: 'pointer', transition: 'background 0.15s' }}
+                  <div key={i} onClick={() => setSelectedStepId(conn.to)} style={{ padding: '10px 12px', borderRadius: '5px', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', marginBottom: '5px', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(245,166,35,0.12)')}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(245,166,35,0.06)')}
                   >
-                    <p style={{ fontFamily: DM, fontSize: '12px', fontWeight: 600, color: '#f5a623' }}>→ {toHub?.icon} {toHub?.name}</p>
+                    <p style={{ fontFamily: DM, fontSize: '12px', fontWeight: 600, color: '#f5a623' }}>→ {toHub?.icon ?? '·'} {toStep?.name ?? conn.to}</p>
                   </div>
                 )
               })}
@@ -582,13 +736,14 @@ export function FlowMapGraph({ hubs: rawHubs, steps }: FlowMapGraphProps) {
             <div style={{ padding: '16px 20px' }}>
               <p style={{ fontFamily: DM, fontSize: '9px', letterSpacing: '0.3em', color: 'rgba(26,29,59,0.45)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '10px' }}>Chega de</p>
               {incoming.map((conn, i) => {
-                const fromHub = hubs.find((h) => h.id === conn.fromHub)
+                const fromHub  = hubs.find((h) => h.stepId === conn.from)
+                const fromStep = getStep(conn.from)
                 return (
-                  <div key={i} onClick={() => setSelectedHub(conn.fromHub as HubId)} style={{ padding: '10px 12px', borderRadius: '5px', background: 'rgba(26,29,59,0.03)', border: '1px solid rgba(26,29,59,0.1)', marginBottom: '5px', cursor: 'pointer', transition: 'background 0.15s' }}
+                  <div key={i} onClick={() => setSelectedStepId(conn.from)} style={{ padding: '10px 12px', borderRadius: '5px', background: 'rgba(26,29,59,0.03)', border: '1px solid rgba(26,29,59,0.1)', marginBottom: '5px', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(26,29,59,0.06)')}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(26,29,59,0.03)')}
                   >
-                    <p style={{ fontFamily: DM, fontSize: '12px', fontWeight: 600, color: 'rgba(26,29,59,0.65)' }}>← {fromHub?.icon} {fromHub?.name}</p>
+                    <p style={{ fontFamily: DM, fontSize: '12px', fontWeight: 600, color: 'rgba(26,29,59,0.65)' }}>← {fromHub?.icon ?? '·'} {fromStep?.name ?? conn.from}</p>
                   </div>
                 )
               })}

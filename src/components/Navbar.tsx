@@ -46,7 +46,7 @@ export function Navbar() {
           {[
             { to: '/',         label: 'Biblioteca' },
             { to: '/training', label: 'Treino'     },
-            { to: '/flow-map', label: 'Flow Map'   },
+            { to: '/flow-map', label: 'Conexões entre Passos'   },
           ].map(({ to, label }) => (
             <Link
               key={to}
@@ -121,7 +121,7 @@ export function Navbar() {
             {[
               { to: '/',         label: 'Biblioteca' },
               { to: '/training', label: 'Treino'     },
-              { to: '/flow-map', label: 'Flow Map'   },
+              { to: '/flow-map', label: 'Conexões entre Passos'   },
             ].map(({ to, label }) => (
               <Link
                 key={to}

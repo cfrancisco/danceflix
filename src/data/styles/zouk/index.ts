@@ -1,5 +1,5 @@
 import type { DanceStyle, DanceStep } from '../../types'
-import { zoukSteps } from './zoukSteps'
+import { zoukSteps } from './steps'
 import { zoukFlows, zoukHubs } from './flowMap'
 
 /**

@@ -171,10 +171,10 @@ O projeto usa **inline styles para valores de design específicos** e Tailwind p
 | Score | Label | Cor |
 |---|---|---|
 | 0 | Não praticado | `#b39ddb` (roxo) |
-| 1 | Iniciante | `#f06292` (rosa) |
-| 2 | Em desenvolvimento | `#ffa726` (laranja) |
-| 3 | Confortável | `#4fc3f7` (azul) |
-| 4 | Forte | `#00c9a7` (verde-água) |
+| 1 | Em desenvolvimento | `#f06292` (rosa) |
+| 2 | Iniciante | `#ffa726` (laranja) |
+| 3 | Estável | `#4fc3f7` (azul) |
+| 4 | Confortável | `#00c9a7` (verde-água) |
 | 5 | Dominado | `#f5a623` (âmbar) |
 
 ---
@@ -219,20 +219,21 @@ npm run lint      # ESLint
 2. Registrar em `src/data/registry.ts`
 3. `VideoCategory` em `src/types.ts` pode precisar de categorias específicas do estilo ou ser generalizado
 4. `FlowMap.tsx` e `FlowMapGraph.tsx` precisam receber o estilo como prop (atualmente hardcoded para Zouk)
-
-### Adicionar vídeo ao Zouk
-Editar `src/data/styles/zouk/videos.ts` — adicionar objeto ao array `zoukVideos`.
-Campos obrigatórios: `id` (slug único), `title`, `description`, `duration`, `date`, `category`, `tags`, `presenter`, `knowledgeLevel`.
-
-### Adicionar hub ao FlowMap
-Editar `src/data/styles/zouk/flowMap.ts`:
-1. Adicionar entrada em `hubs`
-2. Adicionar posição em `POSITIONS` em `FlowMapGraph.tsx`
-3. Adicionar conexões em `connections`
+ 
 
 ### `@xyflow/react`
 Instalado mas não usado. Candidato para substituir o SVG manual em `FlowMapGraph.tsx`.
 
-### Deploy
-`vite.config.ts` define `base: '/danceflix/'` — compatível com GitHub Pages no repo `danceflix`.
-Não há script `deploy` configurado ainda (diferente do neuro-papers).
+## Adicionando conteúdo
+
+### Novo vídeo (Zouk)
+Editar `src/data/styles/zouk/steps.ts` e adicionar ao array `zouksteps`. Campos obrigatórios: `id`, `title`, `description`, `duration`, `date`, `category`, `tags`, `presenter`, `knowledgeLevel`.
+
+### Novo estilo de dança
+1. Criar `src/data/styles/<id>/steps.ts`, `flowMap.ts`, `index.ts`
+2. Registrar em `src/data/registry.ts`
+
+### Novo hub no FlowMap
+1. Adicionar entrada em `src/data/styles/zouk/flowMap.ts` → `hubs`
+2. Adicionar posição em `src/components/FlowMapGraph.tsx` → `ZOUK_POSITIONS`
+3. Adicionar conexões em `connections`

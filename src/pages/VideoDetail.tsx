@@ -132,28 +132,19 @@ export function VideoDetail() {
         </div>
 
         {/* Metadata row */}
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: '20px',
-          paddingBottom: '20px', marginBottom: '20px', borderBottom: '1px solid #dde3f5',
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            {activeSource.presenter ?? video.presenter}
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {activeSource.duration ?? video.duration}
-          </span>
-        </div>
+        {(activeSource.duration ?? video.duration) && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '20px',
+            paddingBottom: '20px', marginBottom: '20px', borderBottom: '1px solid #dde3f5',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {activeSource.duration ?? video.duration}
+            </span>
+          </div>
+        )}
 
         {/* Description */}
         <p style={{ fontFamily: P, fontSize: '14px', lineHeight: 1.75, color: '#4a4e6b', marginBottom: '20px' }}>

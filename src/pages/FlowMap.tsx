@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getVideoById } from '../data/videos'
 import { FlowMapGraph } from '../components/FlowMapGraph'
 import { useActiveStyle } from '../context/StyleContext'
 import { LEVEL_LABELS } from '../types'
@@ -8,12 +7,10 @@ import type { Hub, DanceStep } from '../types'
 
 const P = "'Poppins', sans-serif"
 
-type HubId = string
-
 export function FlowMap() {
   const [view, setView] = useState<'lista' | 'rede'>('rede')
   const [selectedFlow, setSelectedFlow] = useState<number>(0)
-  const [expandedHub, setExpandedHub] = useState<HubId | null>(null)
+  const [expandedHub, setExpandedHub] = useState<string | null>(null)
 
   const { activeStyle } = useActiveStyle()
   const { hubs, flows, steps } = activeStyle
@@ -33,35 +30,11 @@ export function FlowMap() {
       }}
     >
       {/* Header — full when lista, compact toolbar when rede */}
-      {view === 'lista' ? (
-        <div style={{
-          background: '#f0f4ff',
-          borderBottom: '1px solid #dde3f5',
-          padding: '40px 0 44px', flexShrink: 0, position: 'relative', overflow: 'hidden',
-        }}>
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'radial-gradient(circle, #b39ddb22 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-          <div className="page-wrap" style={{ position: 'relative' }}>
-            <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.45em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px' }}>
-              Estrutura
-            </p>
-            <h1 style={{ fontFamily: P, fontWeight: 900, fontSize: 'clamp(36px, 7vw, 72px)', color: '#1a1d3b', lineHeight: 0.9, letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
-              MAPA<br />
-              <span style={{ background: 'linear-gradient(90deg, #f5a623, #f06292)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                MENTAL
-              </span>
-            </h1>
-            <p style={{ fontFamily: P, fontSize: '14px', color: '#4a4e6b', marginTop: '14px', marginBottom: '20px' }}>
-              Entenda como os passos se conectam em fluxos musicais
-            </p>
-            <ViewToggle view={view} setView={setView} />
-          </div>
-        </div>
-      ) : (
         <div style={{
           background: 'rgba(240,244,255,0.94)',
           backdropFilter: 'blur(10px)',
           borderBottom: '1px solid #dde3f5',
-          padding: '16px 32px',
+          padding: '16px 52px',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -77,14 +50,14 @@ export function FlowMap() {
               Estrutura
             </span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-              <h2 style={{ fontFamily: P, fontWeight: 900, fontSize: '26px', letterSpacing: '-0.03em', textTransform: 'uppercase', color: '#1a1d3b', lineHeight: 1 }}>
-                MAPA{' '}
-                <span style={{ background: 'linear-gradient(90deg, #f5a623, #f06292)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                  MENTAL
-                </span>
-              </h2>
-              <span style={{ fontFamily: P, fontSize: '11px', color: '#b39ddb' }}>
-                {hubs.length} hubs · {steps.length} passos
+             <h1 style={{ fontFamily: P, fontWeight: 900, fontSize: '40px', color: '#1a1d3b', lineHeight: 0.9, letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
+              MAPA<br />
+              <span style={{ background: 'linear-gradient(90deg, #f5a623, #f06292)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                MENTAL
+              </span>
+            </h1>
+              <span style={{ marginTop:'auto', marginBottom:'0px', fontFamily: P, fontSize: '11px', color: '#b39ddb' }}>
+                      {hubs.length} hubs · {steps.length} passos  · {flows.length} flows
               </span>
             </div>
           </div>
@@ -92,12 +65,11 @@ export function FlowMap() {
             <ViewToggle view={view} setView={setView} />
           </div>
         </div>
-      )}
 
       {/* ── REDE VIEW ── */}
       {view === 'rede' && (
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          <FlowMapGraph hubs={hubs} steps={steps} />
+          <FlowMapGraph hubs={hubs} steps={steps} flows={flows} styleId={activeStyle.id} />
         </div>
       )}
 
@@ -142,24 +114,25 @@ export function FlowMap() {
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '8px' }}>
-                {flowHubIds.map((hubId, index) => {
-                  const hub = hubs.find((h) => h.id === hubId)
+                {flowHubIds.map((stepId, index) => {
+                  const hub = hubs.find((h) => h.stepId === stepId)
+                  const step = steps.find((s) => s.id === stepId)
                   if (!hub) return null
                   return (
-                    <div key={hubId} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <div key={stepId} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       <button
-                        onClick={() => setExpandedHub(expandedHub === hubId ? null : hubId)}
+                        onClick={() => setExpandedHub(expandedHub === stepId ? null : stepId)}
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
                           padding: '10px 14px', borderRadius: '10px',
-                          border: `1px solid ${expandedHub === hubId ? '#f5a623' : '#dde3f5'}`,
-                          background: expandedHub === hubId ? 'rgba(245,166,35,0.08)' : '#ffffff',
+                          border: `1px solid ${expandedHub === stepId ? '#f5a623' : '#dde3f5'}`,
+                          background: expandedHub === stepId ? 'rgba(245,166,35,0.08)' : '#ffffff',
                           cursor: 'pointer', transition: 'all 0.15s',
                         }}
                       >
                         <span style={{ fontSize: '22px' }}>{hub.icon}</span>
                         <p style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#1a1d3b', textAlign: 'center', maxWidth: '80px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                          {hub.name}
+                          {step?.name ?? stepId}
                         </p>
                       </button>
                       {index < flowHubIds.length - 1 && (
@@ -177,7 +150,7 @@ export function FlowMap() {
           {/* Expanded Hub */}
           {expandedHub && (
             <div style={{ marginBottom: '40px', padding: '24px', border: '1px solid rgba(245,166,35,0.3)', borderRadius: '16px', background: 'rgba(245,166,35,0.04)' }}>
-              <HubDetails hubId={expandedHub} hubs={hubs} steps={steps} onClose={() => setExpandedHub(null)} />
+              <HubDetails stepId={expandedHub} hubs={hubs} steps={steps} onClose={() => setExpandedHub(null)} />
             </div>
           )}
 
@@ -188,38 +161,37 @@ export function FlowMap() {
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {hubs.map((hub) => {
-                const hubSteps = steps.filter((s) => s.hubs?.includes(hub.id))
+                const step = steps.find((s) => s.id === hub.stepId)
                 return (
                   <button
-                    key={hub.id}
-                    onClick={() => setExpandedHub(expandedHub === hub.id ? null : hub.id)}
+                    key={hub.stepId}
+                    onClick={() => setExpandedHub(expandedHub === hub.stepId ? null : hub.stepId)}
                     style={{
                       textAlign: 'left', padding: '20px', borderRadius: '16px',
-                      border: `1px solid ${expandedHub === hub.id ? '#f5a623' : '#dde3f5'}`,
-                      background: expandedHub === hub.id ? 'rgba(245,166,35,0.05)' : '#ffffff',
+                      border: `1px solid ${expandedHub === hub.stepId ? '#f5a623' : '#dde3f5'}`,
+                      background: expandedHub === hub.stepId ? 'rgba(245,166,35,0.05)' : '#ffffff',
                       cursor: 'pointer', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={(e) => { if (expandedHub !== hub.id) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)' }}
-                    onMouseLeave={(e) => { if (expandedHub !== hub.id) e.currentTarget.style.borderColor = '#dde3f5' }}
+                    onMouseEnter={(e) => { if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)' }}
+                    onMouseLeave={(e) => { if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = '#dde3f5' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontSize: '28px' }}>{hub.icon}</span>
-                      <span style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#8b95b8', padding: '2px 8px', border: '1px solid #dde3f5', borderRadius: '20px' }}>
-                        {hub.difficulty}/5
-                      </span>
+                      {step && (
+                        <span style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#8b95b8', padding: '2px 8px', border: '1px solid #dde3f5', borderRadius: '20px' }}>
+                          {step.difficulty}/5
+                        </span>
+                      )}
                     </div>
                     <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '16px', color: '#1a1d3b', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                      {hub.name}
+                      {step?.name ?? hub.stepId}
                     </h3>
-                    <p style={{ fontFamily: P, fontSize: '12px', color: '#4a4e6b', lineHeight: 1.5 }}>{hub.description}</p>
-                    {hubSteps.length > 0 && (
-                      <p style={{ fontFamily: P, fontSize: '11px', color: '#f5a623', marginTop: '8px', fontWeight: 700 }}>
-                        {hubSteps.length} passo{hubSteps.length > 1 ? 's' : ''}
+                    <p style={{ fontFamily: P, fontSize: '12px', color: '#4a4e6b', lineHeight: 1.5 }}>{step?.description}</p>
+                    {hub.notes && (
+                      <p style={{ fontFamily: P, fontSize: '11px', color: '#b39ddb', fontStyle: 'italic', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dde3f5' }}>
+                        {hub.notes}
                       </p>
                     )}
-                    <p style={{ fontFamily: P, fontSize: '11px', color: '#b39ddb', fontStyle: 'italic', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dde3f5' }}>
-                      {hub.notes}
-                    </p>
                   </button>
                 )
               })}
@@ -232,19 +204,23 @@ export function FlowMap() {
 }
 
 interface HubDetailsProps {
-  hubId: HubId
+  stepId: string
   hubs: Hub[]
   steps: DanceStep[]
   onClose: () => void
 }
 
-function HubDetails({ hubId, hubs, steps, onClose }: HubDetailsProps) {
-  const hub = hubs.find((h) => h.id === hubId)
+function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
+  const hub = hubs.find((h) => h.stepId === stepId)
+  const step = steps.find((s) => s.id === stepId)
   if (!hub) return null
 
-  const hubSteps = steps.filter((s) => s.hubs?.includes(hub.id))
-  const outgoing = hub.outgoingSteps.map((id) => hubs.find((h) => h.id === id)).filter(Boolean) as Hub[]
-  const incoming = hub.incomingSteps.map((id) => hubs.find((h) => h.id === id)).filter(Boolean) as Hub[]
+  const outgoing = hub.outgoingSteps
+    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id) }))
+    .filter((x) => x.hub)
+  const incoming = hub.incomingSteps
+    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id) }))
+    .filter((x) => x.hub)
 
   return (
     <div>
@@ -252,8 +228,10 @@ function HubDetails({ hubId, hubs, steps, onClose }: HubDetailsProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '36px' }}>{hub.icon}</span>
           <div>
-            <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '22px', color: '#1a1d3b', letterSpacing: '-0.01em' }}>{hub.name}</h3>
-            <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>{hub.description}</p>
+            <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '22px', color: '#1a1d3b', letterSpacing: '-0.01em' }}>
+              {step?.name ?? stepId}
+            </h3>
+            <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>{step?.description}</p>
           </div>
         </div>
         <button onClick={onClose} style={{ fontFamily: P, fontSize: '14px', color: '#8b95b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
@@ -261,32 +239,21 @@ function HubDetails({ hubId, hubs, steps, onClose }: HubDetailsProps) {
         </button>
       </div>
 
-      {hubSteps.length > 0 && (
-        <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #dde3f5' }}>
-          <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.25em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px' }}>
-            Passos deste hub
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {hubSteps.map((step) => {
-              const video = getVideoById(step.id)
-              if (!video) return null
-              return (
-                <Link
-                  key={step.id}
-                  to={`/video/${step.id}`}
-                  style={{
-                    fontFamily: P, fontSize: '12px', fontWeight: 600, color: '#1a1d3b',
-                    padding: '6px 14px', borderRadius: '20px', border: '1px solid #dde3f5',
-                    background: '#ffffff', textDecoration: 'none', transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f5a623'; e.currentTarget.style.color = '#c97d00' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#dde3f5'; e.currentTarget.style.color = '#1a1d3b' }}
-                >
-                  {video.name}
-                </Link>
-              )
-            })}
-          </div>
+      {step && (
+        <div style={{ marginBottom: '16px' }}>
+          <Link
+            to={`/video/${step.id}`}
+            style={{
+              fontFamily: P, fontSize: '12px', fontWeight: 600, color: '#1a1d3b',
+              padding: '6px 14px', borderRadius: '20px', border: '1px solid #dde3f5',
+              background: '#ffffff', textDecoration: 'none', transition: 'all 0.15s',
+              display: 'inline-block',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f5a623'; e.currentTarget.style.color = '#c97d00' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#dde3f5'; e.currentTarget.style.color = '#1a1d3b' }}
+          >
+            Ver passo →
+          </Link>
         </div>
       )}
 
@@ -297,10 +264,10 @@ function HubDetails({ hubId, hubs, steps, onClose }: HubDetailsProps) {
               Para onde vai daqui
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {outgoing.map((target) => (
-                <div key={target.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                  <span style={{ fontSize: '18px' }}>{target.icon}</span>
-                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{target.name}</p>
+              {outgoing.map(({ hub: h, step: s }) => (
+                <div key={h!.stepId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
+                  <span style={{ fontSize: '18px' }}>{h!.icon}</span>
+                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? h!.stepId}</p>
                 </div>
               ))}
             </div>
@@ -312,10 +279,10 @@ function HubDetails({ hubId, hubs, steps, onClose }: HubDetailsProps) {
               De onde vem
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {incoming.map((source) => (
-                <div key={source.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                  <span style={{ fontSize: '18px' }}>{source.icon}</span>
-                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{source.name}</p>
+              {incoming.map(({ hub: h, step: s }) => (
+                <div key={h!.stepId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
+                  <span style={{ fontSize: '18px' }}>{h!.icon}</span>
+                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? h!.stepId}</p>
                 </div>
               ))}
             </div>
