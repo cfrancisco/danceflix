@@ -87,6 +87,8 @@ export interface Flow {
   sequence: string[]
   difficulty: Level
   videos?: VideoSource[]
+  /** Video-to-step sync: maps stepId to timestamp (seconds) in the flow video */
+  videoTimestamps?: Record<string, number>
 }
 
 // ── DanceStyle ────────────────────────────────────────────────────────────────

@@ -5,8 +5,7 @@ import { CategoryTag } from '../components/CategoryTag'
 import type { StepCategory, VideoSource } from '../types'
 import { TrainingPanel } from '../components/TrainingPanel'
 import { RelatedVideos } from '../components/RelatedVideos'
-
-const P = "'Poppins', sans-serif"
+import './VideoDetail.css'
 
 export function VideoDetail() {
   const { id } = useParams<{ id: string }>()
@@ -23,11 +22,11 @@ export function VideoDetail() {
 
   if (!video) {
     return (
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <p style={{ fontFamily: P, color: '#8b95b8', fontSize: '15px', marginBottom: '16px' }}>
+      <div className="vd-not-found">
+        <p className="vd-not-found__text">
           Vídeo não encontrado.
         </p>
-        <Link to="/" style={{ fontFamily: P, color: '#f5a623', fontSize: '13px', textDecoration: 'none' }}>
+        <Link to="/" className="vd-not-found__link">
           ← Voltar para a biblioteca
         </Link>
       </div>
@@ -44,18 +43,14 @@ export function VideoDetail() {
   const activeSource = effectiveSources[Math.min(activeIdx, effectiveSources.length - 1)] ?? {}
 
   return (
-    <div style={{ background: '#ffffff', minHeight: '100vh' }}>
+    <div className="vd-page">
 
       {/* Breadcrumb bar */}
-      <div style={{ background: '#f0f4ff', padding: '12px 0', borderBottom: '1px solid #dde3f5' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="vd-breadcrumb">
+        <div className="vd-breadcrumb__inner">
           <Link
             to="/"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              fontFamily: P, fontSize: '12px', letterSpacing: '0.1em', fontWeight: 600,
-              textTransform: 'uppercase', color: '#4a4e6b', textDecoration: 'none', transition: 'color 0.2s',
-            }}
+            className="vd-breadcrumb__link"
             onMouseEnter={(e) => (e.currentTarget.style.color = '#f5a623')}
             onMouseLeave={(e) => (e.currentTarget.style.color = '#4a4e6b')}
           >
@@ -67,23 +62,21 @@ export function VideoDetail() {
         </div>
       </div>
 
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '40px 24px 80px' }}>
+      <main className="vd-main">
 
         {/* Source selector — shown only when there are multiple sources */}
         {effectiveSources.length > 1 && (
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+          <div className="vd-source-pills">
             {effectiveSources.map((src, i) => (
               <button
                 key={i}
                 onClick={() => setActiveIdx(i)}
-                style={{
-                  fontFamily: P, fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', padding: '6px 16px', borderRadius: '50px',
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  border: `1px solid ${activeIdx === i ? '#f5a623' : '#dde3f5'}`,
-                  background: activeIdx === i ? 'rgba(245,166,35,0.10)' : '#ffffff',
-                  color: activeIdx === i ? '#c97d00' : '#4a4e6b',
-                }}
+                className={`vd-source-btn${activeIdx === i ? ' is-active' : ''}`}
+                style={activeIdx === i ? {
+                  borderColor: '#f5a623',
+                  background: 'rgba(245,166,35,0.10)',
+                  color: '#c97d00',
+                } : undefined}
               >
                 {src.label ?? `Fonte ${i + 1}`}
               </button>
@@ -91,10 +84,9 @@ export function VideoDetail() {
           </div>
         )}
 
-        <div style={{ borderRadius: '16px', overflow: 'hidden', background: '#1a1d3b', aspectRatio: '16/9', marginBottom: '32px', boxShadow: '0 8px 40px rgba(26,29,59,0.2)' }}>
+        <div className="vd-player">
           {activeSource.youtubeId && activeSource.youtubeId !== '' ? (
             <iframe
-              style={{ width: '100%', height: '100%', border: 'none' }}
               src={`https://www.youtube.com/embed/${activeSource.youtubeId}`}
               title={video.name}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -102,30 +94,25 @@ export function VideoDetail() {
             />
           ) : activeSource.videoUrl ? (
             <video
-              style={{ width: '100%', height: '100%', background: '#1a1d3b' }}
               src={activeSource.videoUrl}
               controls
               controlsList="nodownload"
               playsInline
             />
           ) : (
-            <div style={{
-              width: '100%', height: '100%',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(135deg, #1a1d3b 0%, #2d3163 100%)',
-            }}>
-              <svg width="52" height="52" style={{ color: 'rgba(179,157,219,0.4)', marginBottom: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="vd-placeholder">
+              <svg width="52" height="52" className="vd-placeholder__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <p style={{ fontFamily: P, color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '4px' }}>Vídeo ainda não disponível</p>
-              <p style={{ fontFamily: P, color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>Este passo será documentado em breve</p>
+              <p className="vd-placeholder__title">Vídeo ainda não disponível</p>
+              <p className="vd-placeholder__subtitle">Este passo será documentado em breve</p>
             </div>
           )}
         </div>
 
         {/* Title + category */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <h1 style={{ fontFamily: P, fontWeight: 800, fontSize: 'clamp(22px, 4vw, 32px)', color: '#1a1d3b', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+        <div className="vd-title-row">
+          <h1 className="vd-title">
             {video.name}
           </h1>
           <CategoryTag category={video.category as Exclude<StepCategory, 'All'>} size="md" />
@@ -133,11 +120,8 @@ export function VideoDetail() {
 
         {/* Metadata row */}
         {(activeSource.duration ?? video.duration) && (
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '20px',
-            paddingBottom: '20px', marginBottom: '20px', borderBottom: '1px solid #dde3f5',
-          }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>
+          <div className="vd-meta">
+            <span className="vd-meta__item">
               <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -147,20 +131,17 @@ export function VideoDetail() {
         )}
 
         {/* Description */}
-        <p style={{ fontFamily: P, fontSize: '14px', lineHeight: 1.75, color: '#4a4e6b', marginBottom: '20px' }}>
+        <p className="vd-desc">
           {video.description}
         </p>
 
         {/* Technical details */}
         {video.technicalDetails && (
-          <div style={{
-            padding: '16px 20px', background: '#f0f4ff',
-            borderLeft: '3px solid #00c9a7', borderRadius: '0 10px 10px 0', marginBottom: '20px',
-          }}>
-            <p style={{ fontFamily: P, fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, color: '#00c9a7', marginBottom: '6px' }}>
+          <div className="vd-tech">
+            <p className="vd-tech__label">
               Detalhes Técnicos
             </p>
-            <p style={{ fontFamily: P, fontSize: '13px', lineHeight: 1.7, color: '#4a4e6b' }}>
+            <p className="vd-tech__text">
               {video.technicalDetails}
             </p>
           </div>
@@ -168,17 +149,12 @@ export function VideoDetail() {
 
         {/* Tags */}
         {video.tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
+          <div className="vd-tags">
             {video.tags.map((tag) => (
               <Link
                 key={tag}
                 to={`/?q=${encodeURIComponent(tag)}`}
-                style={{
-                  fontFamily: P, fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600,
-                  padding: '5px 12px', borderRadius: '20px',
-                  background: 'rgba(179,157,219,0.1)', border: '1px solid rgba(179,157,219,0.3)',
-                  color: '#7c5cbf', textDecoration: 'none', transition: 'background 0.15s',
-                }}
+                className="vd-tag"
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(179,157,219,0.2)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(179,157,219,0.1)')}
               >

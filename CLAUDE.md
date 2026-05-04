@@ -1,192 +1,247 @@
-# danceflix
+# Danceflix
 
-Biblioteca pessoal de passos de dança, com vídeos, sistema de treino e mapa mental de fluxo entre passos. Originalmente focado em Zouk, com arquitetura preparada para múltiplos estilos.
+Personal dance step library with videos, training system, and mental flow map between steps. Supports multiple styles: Zouk, Bachata, and Samba.
 
-Hospedado localmente / build estático (sem deploy configurado ainda).
+Hosted via GitHub Pages (`npm run deploy`).
+
+---
+
+## Working Mode
+
+**Always enter plan mode before implementing any changes.** Before writing or editing code, think through the approach, list the affected files, and confirm the plan with the user. Only start coding after the plan is agreed upon.
+- 
+You don't need check in the preview mode if everything is correct, just provide the code. The user will check and ask for changes if needed. 
 
 ---
 
 ## Stack
 
 - **Vite + React 19 + TypeScript**
-- **Tailwind CSS v4** via plugin do Vite (`@tailwindcss/vite`) — sem `tailwind.config.js`, tema em `src/index.css` com `@theme {}`
-- **React Router v7** com `HashRouter` (URLs `#/...`)
-- **Framer Motion** para animações de entrada (`AnimatedSection`)
-- **@xyflow/react** instalado (não usado ainda — candidato para FlowMapGraph SVG futuro)
+- **Tailwind CSS v4** via Vite plugin (`@tailwindcss/vite`) — no `tailwind.config.js`, theme in `src/index.css` with `@theme {}`
+- **React Router v7** with `HashRouter` (URLs `#/...`)
+- **Framer Motion** — route animations (`AnimatePresence`) and viewport entry (`AnimatedSection`); always use animations when creating new components or pages
+- **@xyflow/react** installed, not used yet — candidate to replace manual SVG in `FlowMapGraph`
 
 ---
 
-## Estrutura
+## Structure
 
 ```
 src/
-├── App.tsx                  HashRouter + rotas
+├── App.tsx                  HashRouter + StyleProvider + AnimatePresence on routes
 ├── main.tsx                 Entry point
-├── index.css                Tailwind v4 + @theme + utilitários globais
-├── types.ts                 Tipos compartilhados: Video, VideoCategory, TrainingScore, VideoProgress
+├── index.css                Tailwind v4 + @theme + global utilities (.page-wrap, .text-rainbow)
+├── types.ts                 SOURCE OF TRUTH for all types (DanceStep, Hub, Flow, DanceStyle, TrainingProgress…)
+├── context/
+│   └── StyleContext.tsx     StyleProvider + useActiveStyle() — global active style
 ├── data/
-│   ├── videos.ts            Shim de retrocompatibilidade → re-exporta do registry
-│   ├── registry.ts          Registro de estilos; API pública (getAllStyles, getVideoById, getRelatedVideos…)
-│   ├── types.ts             Tipos do sistema de estilos: Hub, Connection, CommonFlow, FlowMap, DanceStyle
+│   ├── videos.ts            Backward-compat shim → re-exports from registry
+│   ├── registry.ts          Style registry; public API (getAllStyles, getStyleById, getVideoById, getRelatedVideos…)
+│   ├── types.ts             Shim → re-exports from src/types.ts (do not modify)
 │   └── styles/
-│       └── zouk/
-│           ├── index.ts     ZoukStyle descriptor (injeta styleId nos vídeos)
-│           ├── videos.ts    Catálogo de vídeos (sem styleId — fica limpo)
-│           └── flowMap.ts   Hubs, conexões e fluxos comuns do Zouk
+│       ├── zouk/
+│       │   ├── index.ts     ZoukStyle descriptor (injects styleId into steps)
+│       │   ├── steps.ts     Zouk step catalog (no styleId — stays clean)
+│       │   └── flowMap.ts   zoukHubs[] and zoukFlows[]
+│       ├── bachata/
+│       │   ├── index.ts
+│       │   ├── videos.ts    (legacy filename — equivalent to steps.ts, should be updated as soon as possible)
+│       │   └── flowMap.ts
+│       └── samba/
+│           ├── index.ts
+│           ├── videos.ts   (legacy filename — equivalent to steps.ts, should be updated as soon as possible)
+│           └── flowMap.ts
 ├── components/
-│   ├── AnimatedSection.tsx  Wrapper framer-motion (fade-in ao entrar na viewport)
-│   ├── CategoryTag.tsx      Badge de categoria
-│   ├── FlowMapGraph.tsx     Grafo SVG interativo (renderiza o FlowMap)
-│   ├── Navbar.tsx           Barra de navegação sticky com busca
-│   ├── RelatedVideos.tsx    Grade de vídeos relacionados
-│   ├── TrainingPanel.tsx    Painel de progresso individual de um vídeo
-│   └── VideoCard.tsx        Card de vídeo (thumbnail, nível, categoria)
+│   ├── AnimatedSection.tsx  Framer-motion wrapper (fade-in on viewport entry)
+│   ├── CategoryTag.tsx      Category badge
+│   ├── FlowMapGraph.tsx     Interactive SVG graph (renders hubs and flows of active style)
+│   ├── Navbar.tsx           Sticky navigation bar with search
+│   ├── RelatedVideos.tsx    Grid of related steps
+│   ├── StyleSelector.tsx    Active style selector (Zouk / Bachata / Samba)
+│   ├── TrainingPanel.tsx    Individual step training progress panel
+│   └── VideoCard.tsx        Step card (thumbnail, level, category)
+│   (each component has its .css file alongside)
 ├── hooks/
-│   └── useTraining.ts       Estado de treino persistido em localStorage
+│   └── useTraining.ts       Training state persisted in localStorage
 └── pages/
-    ├── Home.tsx             Hero + filtro por categoria + grid de vídeos
-    ├── VideoDetail.tsx      Player (YouTube embed ou <video>) + TrainingPanel + RelatedVideos
-    ├── TrainingQueue.tsx    Lista de todos os vídeos ordenada por prioridade de treino
-    └── FlowMap.tsx          Mapa mental: view "lista" (hubs) e view "rede" (SVG grafo)
+    ├── Home.tsx             Hero + category filter + step grid
+    ├── VideoDetail.tsx      Player + TrainingPanel + RelatedVideos
+    ├── TrainingQueue.tsx    All steps ordered by training priority
+    └── FlowMap.tsx          Mental map: "list" view (hubs) and "network" view (SVG graph)
+    (each page has its .css file alongside)
 ```
+
+> See also `CONCEPTS.md` for conceptual domain modeling (DanceStep, Hub, Flow, DanceStyle).
 
 ---
 
-## Modelo de dados
+## Data Model
 
-### `src/types.ts` — tipos de vídeo e progresso
+All types live in `src/types.ts`. `src/data/types.ts` is just a re-export shim.
 
 ```ts
-type VideoCategory =
+type Level = 0 | 1 | 2 | 3 | 4 | 5
+// Used for both difficulty (step property) and learningLevel (practitioner progress)
+
+type StepCategory =
   | 'Base e Deslocamento' | 'Abertura' | 'Giros e Dinâmicas'
   | 'Pêndulos' | 'Movimentos de Tronco e Cabeça'
   | 'Conexões e Estilizações' | 'Finalizações' | 'All'
 
-type TrainingScore = 0 | 1 | 2 | 3 | 4 | 5
-// 0 Não praticado | 1 Iniciante | 2 Em desenvolvimento
-// 3 Confortável   | 4 Forte     | 5 Dominado
+interface VideoSource {
+  label?: string
+  youtubeId?: string
+  videoUrl?: string
+  duration?: string   // overrides step's default duration
+}
 
-interface VideoProgress { videoId, timesReviewed, trainingScore, lastReviewedAt, notes? }
-
-interface Video {
-  id: string           // slug usado na URL (/video/:id)
-  styleId?: string     // injetado pelo descriptor do estilo (ex: 'zouk')
-  title, description, duration, date, category, tags[], presenter
-  youtubeId?: string   // '' ou ID real → embed YouTube
-  videoUrl?: string    // path para vídeo local em /public/videos/
-  thumbnail?: string   // fallback: YouTube thumbnail ou SVG placeholder
-  knowledgeLevel: TrainingScore
+interface DanceStep {
+  id: string             // slug used in URL (/video/:id)
+  styleId?: string       // injected by style descriptor
+  name: string
+  description: string
+  youtubeVideos: string[]  // YouTube IDs (embed + thumbnail)
+  localVideos: VideoSource[]
+  thumbnail?: string     // manual fallback; defaults to first YouTube thumbnail
+  duration?: string
+  category: string       // StepCategory value
+  tags: string[]
+  difficulty: Level      // objective step complexity — never changes
   technicalDetails?: string
-  hubs?: string[]      // IDs dos hubs do FlowMap a que pertence
+}
+
+interface Hub {
+  stepId: string         // must equal a DanceStep.id
+  icon: string
+  color: string
+  notes?: string
+  incomingSteps: string[]   // stepIds of hubs flowing into here
+  outgoingSteps: string[]   // stepIds of hubs flowing out from here
+}
+
+interface Flow {
+  id: string
+  name: string
+  description: string
+  sequence: string[]    // ordered stepIds
+  difficulty: Level
+  videos?: VideoSource[]
+}
+
+interface DanceStyle {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  accentColor?: string   // CTA color; defaults to color
+  steps: DanceStep[]
+  hubs: Hub[]
+  flows: Flow[]
+}
+
+interface TrainingProgress {
+  stepId: string
+  timesReviewed: number
+  learningLevel: Level   // practitioner's current mastery (evolves with practice)
+  lastReviewedAt: string
+  notes?: string
 }
 ```
 
-### `src/data/types.ts` — sistema de estilos
-
-```ts
-interface Hub { id, title, description, icon, color, difficulty(0-5), videoIds[], notes }
-interface Connection { fromHub, toHub, videoIds[], description, difficulty, notes }
-interface CommonFlow { name, difficulty, sequence: string[], description }
-interface FlowMap { hubs: Record<string, Hub>, connections: Connection[], commonFlows: CommonFlow[] }
-interface DanceStyle { id, name, description, icon, color, videos: Video[], flowMap: FlowMap }
-```
+**Difference: `difficulty` vs `learningLevel`:**
+- `difficulty` is an objective step property. Set at creation, never changes.
+- `learningLevel` lives in `TrainingProgress`. Represents practitioner's current mastery. Evolves with practice.
 
 ---
 
-## Sistema de estilos de dança
+## Dance Style System
 
-Cada estilo é um módulo autocontido em `src/data/styles/<id>/`:
+Each style is self-contained in `src/data/styles/<id>/`:
 
-| Arquivo | Responsabilidade |
+| File | Responsibility |
 |---|---|
-| `index.ts` | Exporta `DanceStyle`; injeta `styleId` nos vídeos |
-| `videos.ts` | Array `Omit<Video, 'styleId'>[]` — dados puros |
-| `flowMap.ts` | Objeto `FlowMap` — hubs, conexões, fluxos |
+| `index.ts` | Exports `DanceStyle`; injects `styleId` into steps |
+| `steps.ts` (or `videos.ts`) | Array `Omit<DanceStep, 'styleId'>[]` — raw data |
+| `flowMap.ts` | Exports `<id>Hubs: Hub[]` and `<id>Flows: Flow[]` |
 
-Para registrar um novo estilo, adicionar em `src/data/registry.ts`:
+Active style is managed by `StyleContext` (persists in `localStorage` with key `danceflix:activeStyle`). All components needing the style use `useActiveStyle()`.
+
+To register a new style, add to `src/data/registry.ts`:
 ```ts
 import { BachataStyle } from './styles/bachata'
-const registeredStyles = [ZoukStyle, BachataStyle]
+const registeredStyles = [ZoukStyle, BachataStyle, SambaStyle]
 ```
-
----
-
-## Sistema de treino
-
-- `useTraining` persiste `VideoProgress` em `localStorage` (chave: `zouksteps:training`)
-- `knowledgeLevel` no vídeo = ponto de partida; `trainingScore` no progresso = estado atual
-- `TrainingQueue` ordena por `effectiveScore = progress?.trainingScore ?? video.knowledgeLevel`
-- Filtros: por categoria, por status (precisa treinar ≤2 / no caminho ≥3), ordenação (score, nome, recente, nunca revisado)
 
 ---
 
 ## FlowMap
 
-- `FlowMap.tsx` tem duas views: **lista** (cards de hubs) e **rede** (SVG interativo)
-- `FlowMapGraph.tsx` renderiza grafo SVG puro com layout radial fixo (`POSITIONS`)
-  - `base_frente_tras` no centro; demais hubs em posições x/y hardcoded
-  - Nós de passo (vídeo) orbitam ao redor do hub em fan radial (`stepPositions`)
-  - Arestas com curva de Bézier (`bezierCP`)
-  - Tooltip HTML overlay ao hover nos nós de vídeo
-- **Atualmente hardcoded para Zouk** — importa `zoukFlowMap` diretamente. Ponto de extensão futuro: receber `FlowMap` como prop.
+- `FlowMap.tsx` has two views: **list** (hub cards of active style) and **network** (interactive SVG)
+- `FlowMapGraph.tsx` renders pure SVG graph with fixed radial layout (`POSITIONS`)
+  - All elements (nodes) should be moved freely
+  - HTML overlay tooltip on hover
+- Receives `hubs` and `flows` from active style via props
 
 ---
 
-## Design system
+## Design System
 
-### Paleta (definida em `@theme` no `index.css`)
+### Palette (defined in `@theme` in `index.css`)
 
-| Token | Valor | Uso |
+| Token | Value | Use |
 |---|---|---|
-| `--color-bg` | `#eef2ff` | Background global |
-| `--color-navy` | `#1a1d3b` | Texto principal, backgrounds escuros |
-| `--color-text` | `#4a4e6b` | Texto secundário |
-| `--color-amber` | `#f5a623` | CTA, destaque, hover ativo |
-| `--color-grad-teal` | `#00c9a7` | Eyebrow labels, badges verdes |
-| `--color-grad-purple` | `#b39ddb` | Categoria giros, nível 0 |
-| `--color-grad-pink` | `#f06292` | Categoria pêndulos, nível 1 |
-| `--color-grad-blue` | `#4fc3f7` | Categoria abertura, nível 3 |
-| `--color-grad-yellow` | `#ffd54f` | Categoria tronco, nível 2 |
-| `--color-grad-green` | `#00e676` | Categoria finalizações |
+| `--color-bg` | `#eef2ff` | Global background |
+| `--color-bg-card` | `#ffffff` | Card background |
+| `--color-navy` | `#1a1d3b` | Primary text, dark backgrounds |
+| `--color-navy-soft` | `#2d3163` | Dark secondary text |
+| `--color-text` | `#4a4e6b` | Body text |
+| `--color-amber` | `#f5a623` | CTA, accent, active hover |
+| `--color-amber-dark` | `#e09010` | Amber hover |
+| `--color-grad-teal` | `#00c9a7` | Eyebrow labels, green badges |
+| `--color-grad-purple` | `#b39ddb` | Rotations category, level 0 |
+| `--color-grad-pink` | `#f06292` | Pendulums category, level 1 |
+| `--color-grad-blue` | `#4fc3f7` | Opening category, level 3 |
+| `--color-grad-yellow` | `#ffd54f` | Torso category, level 2 |
+| `--color-grad-green` | `#00e676` | Finishes category |
 
-### Tipografia
+### Typography
 
-- Fonte única: **Poppins** (Google Fonts, pesos 300–900)
-- Componentes usam `const P = "'Poppins', sans-serif"` como constante local (padrão do codebase)
-- Eyebrow labels: `10px`, `letter-spacing: 0.45em`, `font-weight: 700`, `text-transform: uppercase`
-- Headings hero: `clamp(36px, 7vw, 72px)`, `font-weight: 900`, `letter-spacing: -0.03em`
+- Single font: **Poppins** (Google Fonts, weights 300–900)
+- Components use `const P = "'Poppins', sans-serif"` as local constant (codebase standard)
+- Eyebrow labels: `9–10px`, `letter-spacing: 0.45em`, `font-weight: 700`, `text-transform: uppercase`
+- Hero headings: `clamp(36px, 7vw, 72px)`, `font-weight: 900`, `letter-spacing: -0.03em`
 
 ### Layout
 
-- `.page-wrap`: `max-width: 1024px`, `margin: auto`, `padding: 0 24px` (definido em `index.css`)
-- Backgrounds de página: `#f0f4ff` (levemente mais saturado que `#eef2ff`)
-- Dot grid decorativo: `radial-gradient(circle, #b39ddb22 1px, transparent 1px)` em `24px`
+- `.page-wrap`: `max-width: 1024px`, `margin: auto`, `padding: 0 24px` (defined in `index.css`)
+- `.text-rainbow`: animated gradient teal → blue → purple → pink with `background-clip: text`
 
-### Estilos inline vs Tailwind
+### Inline styles vs Tailwind
 
-O projeto usa **inline styles para valores de design específicos** e Tailwind para utilitários de layout estrutural (`flex`, `grid`, `gap`, `hidden md:flex`, `sticky`, etc.). Não usar classes Tailwind para cores ou tipografia — usar os tokens inline.
+Project uses **inline styles for design-specific values** and Tailwind for structural layout utilities (`flex`, `grid`, `gap`, `hidden md:flex`, `sticky`, etc.). Do not use Tailwind classes for colors or typography — use inline CSS tokens or `--color-*` tokens.
 
-### Nível de conhecimento — cores
+### `learningLevel` — colors
 
-| Score | Label | Cor |
+| Level | Label | Color |
 |---|---|---|
-| 0 | Não praticado | `#b39ddb` (roxo) |
-| 1 | Em desenvolvimento | `#f06292` (rosa) |
-| 2 | Iniciante | `#ffa726` (laranja) |
-| 3 | Estável | `#4fc3f7` (azul) |
-| 4 | Confortável | `#00c9a7` (verde-água) |
-| 5 | Dominado | `#f5a623` (âmbar) |
+| 0 | Not practiced | `#b39ddb` (purple) |
+| 1 | Developing | `#f06292` (pink) |
+| 2 | Beginner | `#ffa726` (orange) |
+| 3 | Stable | `#4fc3f7` (blue) |
+| 4 | Comfortable | `#00c9a7` (teal) |
+| 5 | Mastered | `#f5a623` (amber) |
 
 ---
 
-## Rotas
+## Routes
 
-| Path | Componente | Descrição |
+| Path | Component | Description |
 |---|---|---|
-| `#/` | `Home` | Hero + filtro + grid |
-| `#/video/:id` | `VideoDetail` | Player + painel de treino |
-| `#/training` | `TrainingQueue` | Fila de treino ordenada |
-| `#/flow-map` | `FlowMap` | Mapa mental do Zouk |
+| `#/` | `Home` | Hero + filter + grid |
+| `#/video/:id` | `VideoDetail` | Player + training panel |
+| `#/training` | `TrainingQueue` | Training queue ordered |
+| `#/flow-map` | `FlowMap` | Mental map of active style |
 
 ---
 
@@ -195,45 +250,34 @@ O projeto usa **inline styles para valores de design específicos** e Tailwind p
 ```bash
 npm run dev       # dev server (Vite)
 npm run build     # tsc -b && vite build
-npm run preview   # serve o build local
+npm run preview   # serve build locally
+npm run deploy    # build + push to gh-pages branch
 npm run lint      # ESLint
 ```
 
 ---
 
-## Padrões e convenções
+## Conventions — what NEVER to do
 
-- **Imports de dados**: todos os componentes importam de `../data/videos` (shim) — nunca diretamente de `styles/zouk/videos`
-- **`styleId`** nunca aparece nos arquivos de dados brutos; sempre injetado pelo descriptor
-- **`videos.ts` na raiz de `data/`** é um shim de retrocompatibilidade — não modificar, só estende o registry
-- **Vídeos sem `youtubeId`** mostram placeholder SVG cinza; vídeos com `youtubeId !== ''` usam thumbnail do YouTube
-- **Player**: prefere YouTube embed; fallback para `<video>` com `videoUrl`; `controlsList="nodownload"` no player local
-- **`hubs[]` no vídeo**: array de IDs de hubs do FlowMap — conecta vídeo ao grafo
+- **Never use Tailwind classes for colors or typography** — use inline tokens or `--color-*` CSS tokens
+- **Never duplicate step data in Hub** — `Hub.stepId` points to `DanceStep`; name, description, difficulty come from the step
+- **Never hardcode active style** — use `useActiveStyle()` to access global style, never import a specific style directly in a component
+- **Never make inline CSS styles inside HTML elements** — create separate CSS files for each component or page. Keeps code organized and maintainable.
+- **Never create unnecessary components** — try to improve existing components first. Avoid component proliferation.
 
 ---
 
-## Extensões planejadas / pontos de crescimento
+## Adding Content
 
-### Adicionar novo estilo (ex: Bachata)
-1. Criar `src/data/styles/bachata/videos.ts`, `flowMap.ts`, `index.ts`
-2. Registrar em `src/data/registry.ts`
-3. `VideoCategory` em `src/types.ts` pode precisar de categorias específicas do estilo ou ser generalizado
-4. `FlowMap.tsx` e `FlowMapGraph.tsx` precisam receber o estilo como prop (atualmente hardcoded para Zouk)
- 
+### New step (Zouk)
+Edit `src/data/styles/zouk/steps.ts` and add to `zoukSteps` array. Required fields: `id`, `name`, `description`, `category`, `tags`, `difficulty`, `youtubeVideos`, `localVideos`.
 
-### `@xyflow/react`
-Instalado mas não usado. Candidato para substituir o SVG manual em `FlowMapGraph.tsx`.
+### New hub in FlowMap
+1. Add entry in `src/data/styles/zouk/flowMap.ts` → `zoukHubs`
+2. Add hardcoded position in `src/components/FlowMapGraph.tsx` → `POSITIONS`
+3. Reference the hub in `incomingSteps`/`outgoingSteps` of neighboring hubs
 
-## Adicionando conteúdo
-
-### Novo vídeo (Zouk)
-Editar `src/data/styles/zouk/steps.ts` e adicionar ao array `zouksteps`. Campos obrigatórios: `id`, `title`, `description`, `duration`, `date`, `category`, `tags`, `presenter`, `knowledgeLevel`.
-
-### Novo estilo de dança
-1. Criar `src/data/styles/<id>/steps.ts`, `flowMap.ts`, `index.ts`
-2. Registrar em `src/data/registry.ts`
-
-### Novo hub no FlowMap
-1. Adicionar entrada em `src/data/styles/zouk/flowMap.ts` → `hubs`
-2. Adicionar posição em `src/components/FlowMapGraph.tsx` → `ZOUK_POSITIONS`
-3. Adicionar conexões em `connections`
+### New dance style
+1. Create `src/data/styles/<id>/steps.ts`, `flowMap.ts`, `index.ts`
+2. Import and add to `src/data/registry.ts` → `registeredStyles`
+3. `StepCategory` in `src/types.ts` may need new categories specific to the style

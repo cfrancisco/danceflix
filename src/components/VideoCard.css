@@ -1,0 +1,52 @@
+.vc-card {
+  text-decoration: none;
+}
+
+.vc-thumb {
+  border-radius: 14px;
+  background: #e8ecf8;
+}
+
+.vc-placeholder {
+  background: linear-gradient(135deg, #dde3f5 0%, #eef2ff 100%);
+}
+
+.vc-placeholder__icon {
+  color: #b39ddb;
+}
+
+.vc-duration {
+  background: rgba(26, 29, 59, 0.72);
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+}
+
+.vc-play-overlay {
+  background: rgba(26, 29, 59, 0.12);
+}
+
+.vc-play-btn {
+  background: #f5a623;
+  box-shadow: 0 6px 20px rgba(245, 166, 35, 0.45);
+}
+
+.vc-play-btn__icon {
+  color: #fff;
+}
+
+.vc-category {
+  color: #00c9a7;
+  font-family: 'Poppins', sans-serif;
+}
+
+.vc-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #1a1d3b;
+}
+
+.vc-level__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  color: #8b95b8;
+}

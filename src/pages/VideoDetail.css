@@ -1,0 +1,238 @@
+/* VideoDetail page styles — BEM-ish with .vd- prefix */
+
+/* ── Page wrapper ── */
+.vd-page {
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+/* ── Not-found state ── */
+.vd-not-found {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.vd-not-found__text {
+  font-family: 'Poppins', sans-serif;
+  color: #8b95b8;
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+
+.vd-not-found__link {
+  font-family: 'Poppins', sans-serif;
+  color: #f5a623;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* ── Breadcrumb bar ── */
+.vd-breadcrumb {
+  background: #f0f4ff;
+  padding: 12px 0;
+  border-bottom: 1px solid #dde3f5;
+}
+
+.vd-breadcrumb__inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.vd-breadcrumb__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #4a4e6b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+/* ── Main content ── */
+.vd-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ── Source selector pills ── */
+.vd-source-pills {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.vd-source-btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid #dde3f5;
+  background: #ffffff;
+  color: #4a4e6b;
+}
+
+.vd-source-btn.is-active {
+  border-color: #f5a623;
+  background: rgba(245, 166, 35, 0.10);
+  color: #c97d00;
+}
+
+/* ── Video player container ── */
+.vd-player {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1a1d3b;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 40px rgba(26, 29, 59, 0.2);
+}
+
+.vd-player iframe,
+.vd-player video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #1a1d3b;
+}
+
+/* ── Video placeholder ── */
+.vd-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1d3b 0%, #2d3163 100%);
+}
+
+.vd-placeholder__icon {
+  color: rgba(179, 157, 219, 0.4);
+  margin-bottom: 16px;
+}
+
+.vd-placeholder__title {
+  font-family: 'Poppins', sans-serif;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.vd-placeholder__subtitle {
+  font-family: 'Poppins', sans-serif;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+/* ── Title + category row ── */
+.vd-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.vd-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: clamp(22px, 4vw, 32px);
+  color: #1a1d3b;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* ── Metadata row ── */
+.vd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #dde3f5;
+}
+
+.vd-meta__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #4a4e6b;
+}
+
+/* ── Description ── */
+.vd-desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #4a4e6b;
+  margin-bottom: 20px;
+}
+
+/* ── Technical details panel ── */
+.vd-tech {
+  padding: 16px 20px;
+  background: #f0f4ff;
+  border-left: 3px solid #00c9a7;
+  border-radius: 0 10px 10px 0;
+  margin-bottom: 20px;
+}
+
+.vd-tech__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #00c9a7;
+  margin-bottom: 6px;
+}
+
+.vd-tech__text {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #4a4e6b;
+}
+
+/* ── Tags ── */
+.vd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.vd-tag {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(179, 157, 219, 0.1);
+  border: 1px solid rgba(179, 157, 219, 0.3);
+  color: #7c5cbf;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.vd-tag:hover {
+  background: rgba(179, 157, 219, 0.2);
+}

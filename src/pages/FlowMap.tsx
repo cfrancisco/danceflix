@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { FlowMapGraph } from '../components/FlowMapGraph'
+import { VideoPreviewTooltip, type VideoPreviewTooltipState } from '../components/VideoPreviewTooltip'
 import { useActiveStyle } from '../context/StyleContext'
 import { LEVEL_LABELS } from '../types'
+import { getVideoThumbnail } from '../data/videos'
 import type { Hub, DanceStep } from '../types'
 
 const P = "'Poppins', sans-serif"
@@ -11,6 +15,7 @@ export function FlowMap() {
   const [view, setView] = useState<'lista' | 'rede'>('rede')
   const [selectedFlow, setSelectedFlow] = useState<number>(0)
   const [expandedHub, setExpandedHub] = useState<string | null>(null)
+  const [tooltip, setTooltip] = useState<VideoPreviewTooltipState | null>(null)
 
   const { activeStyle } = useActiveStyle()
   const { hubs, flows, steps } = activeStyle
@@ -22,10 +27,10 @@ export function FlowMap() {
     <div
       style={{
         background: '#f0f4ff',
-        minHeight: '100vh',
+        minHeight: view === 'rede' ? undefined : '100vh',
         display: view === 'rede' ? 'flex' : 'block',
         flexDirection: 'column',
-        height: view === 'rede' ? '100vh' : 'auto',
+        height: view === 'rede' ? 'calc(100vh - 120px)' : 'auto',
         overflow: view === 'rede' ? 'hidden' : 'auto',
       }}
     >
@@ -66,16 +71,31 @@ export function FlowMap() {
           </div>
         </div>
 
+      <AnimatePresence mode="wait">
       {/* ── REDE VIEW ── */}
       {view === 'rede' && (
-        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        <motion.div
+          key="rede"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}
+        >
           <FlowMapGraph hubs={hubs} steps={steps} flows={flows} styleId={activeStyle.id} />
-        </div>
+        </motion.div>
       )}
 
       {/* ── LISTA VIEW ── */}
       {view === 'lista' && (
-        <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px 100px' }}>
+        <motion.main
+          key="lista"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -24 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px 100px' }}
+        >
 
           {/* Flow Selector */}
           {flows.length > 0 && (
@@ -117,23 +137,41 @@ export function FlowMap() {
                 {flowHubIds.map((stepId, index) => {
                   const hub = hubs.find((h) => h.stepId === stepId)
                   const step = steps.find((s) => s.id === stepId)
-                  if (!hub) return null
+                  const thumb = step ? getVideoThumbnail(step) : undefined
+                  const isHub = !!hub
                   return (
-                    <div key={stepId} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <div key={`${stepId}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       <button
-                        onClick={() => setExpandedHub(expandedHub === stepId ? null : stepId)}
+                        onClick={() => isHub ? setExpandedHub(expandedHub === stepId ? null : stepId) : undefined}
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                          padding: '10px 14px', borderRadius: '10px',
-                          border: `1px solid ${expandedHub === stepId ? '#f5a623' : '#dde3f5'}`,
+                          padding: '10px 14px', borderRadius: '10px', width: '100px',
+                          border: `1px solid ${expandedHub === stepId ? '#f5a623' : isHub ? '#dde3f5' : 'rgba(179,157,219,0.3)'}`,
                           background: expandedHub === stepId ? 'rgba(245,166,35,0.08)' : '#ffffff',
-                          cursor: 'pointer', transition: 'all 0.15s',
+                          cursor: isHub ? 'pointer' : 'default', transition: 'all 0.15s',
+                          position: 'relative', overflow: 'hidden',
                         }}
                       >
-                        <span style={{ fontSize: '22px' }}>{hub.icon}</span>
+                        {thumb ? (
+                          <div style={{
+                            width: '52px', height: '52px', borderRadius: '10px', overflow: 'hidden',
+                            border: `2px solid ${hub?.color ?? '#b39ddb'}`,
+                          }}>
+                            <img src={thumb} alt={step?.name ?? stepId} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '22px' }}>{hub?.icon ?? '💃'}</span>
+                        )}
                         <p style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#1a1d3b', textAlign: 'center', maxWidth: '80px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                           {step?.name ?? stepId}
                         </p>
+                        {isHub && (
+                          <span style={{
+                            position: 'absolute', top: '4px', right: '4px',
+                            width: '8px', height: '8px', borderRadius: '50%',
+                            background: hub!.color, opacity: 0.7,
+                          }} />
+                        )}
                       </button>
                       {index < flowHubIds.length - 1 && (
                         <svg width="20" height="12" style={{ color: '#b39ddb', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 8">
@@ -172,8 +210,25 @@ export function FlowMap() {
                       background: expandedHub === hub.stepId ? 'rgba(245,166,35,0.05)' : '#ffffff',
                       cursor: 'pointer', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={(e) => { if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)' }}
-                    onMouseLeave={(e) => { if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = '#dde3f5' }}
+                    onMouseEnter={(e) => {
+                      if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)'
+                      if (step && !tooltip?.pinned) {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setTooltip({ step, screenX: rect.right + 8, screenY: rect.top, pinned: false })
+                      }
+                    }}
+                    onMouseMove={(e) => {
+                      if (!tooltip?.pinned && step) {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        setTooltip((prev) =>
+                          prev ? { ...prev, screenX: rect.right + 8, screenY: rect.top } : null
+                        )
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = '#dde3f5'
+                      if (!tooltip?.pinned) setTooltip(null)
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontSize: '28px' }}>{hub.icon}</span>
@@ -197,7 +252,17 @@ export function FlowMap() {
               })}
             </div>
           </div>
-        </main>
+        </motion.main>
+      )}
+      </AnimatePresence>
+
+      {tooltip && createPortal(
+        <VideoPreviewTooltip
+          state={tooltip}
+          onClose={() => setTooltip(null)}
+          onPin={() => setTooltip((prev) => prev ? { ...prev, pinned: true } : null)}
+        />,
+        document.body
       )}
     </div>
   )
@@ -216,11 +281,9 @@ function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
   if (!hub) return null
 
   const outgoing = hub.outgoingSteps
-    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id) }))
-    .filter((x) => x.hub)
+    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
   const incoming = hub.incomingSteps
-    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id) }))
-    .filter((x) => x.hub)
+    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
 
   return (
     <div>
@@ -264,12 +327,19 @@ function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
               Para onde vai daqui
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {outgoing.map(({ hub: h, step: s }) => (
-                <div key={h!.stepId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                  <span style={{ fontSize: '18px' }}>{h!.icon}</span>
-                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? h!.stepId}</p>
-                </div>
-              ))}
+              {outgoing.map(({ hub: h, step: s, id }) => {
+                const thumb = s ? getVideoThumbnail(s) : undefined
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
+                    {thumb ? (
+                      <img src={thumb} alt={s?.name ?? id} style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '18px' }}>{h?.icon ?? '💃'}</span>
+                    )}
+                    <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? id}</p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -279,12 +349,19 @@ function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
               De onde vem
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {incoming.map(({ hub: h, step: s }) => (
-                <div key={h!.stepId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                  <span style={{ fontSize: '18px' }}>{h!.icon}</span>
-                  <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? h!.stepId}</p>
-                </div>
-              ))}
+              {incoming.map(({ hub: h, step: s, id }) => {
+                const thumb = s ? getVideoThumbnail(s) : undefined
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
+                    {thumb ? (
+                      <img src={thumb} alt={s?.name ?? id} style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '18px' }}>{h?.icon ?? '💃'}</span>
+                    )}
+                    <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? id}</p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

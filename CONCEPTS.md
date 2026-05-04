@@ -1,107 +1,107 @@
-# Conceitos do domínio — Danceflix
+# Domain Concepts — Danceflix
 
-Documento de referência para os conceitos centrais do projeto e as relações entre eles. Serve de base para tipagem, estrutura de dados e decisões de modelagem.
+Reference document for the project's core concepts and their relationships. Serves as the foundation for typing, data structure, and modeling decisions.
 
 ---
 
-## 1. Passo de Dança (`DanceStep`)
+## 1. Dance Step (`DanceStep`)
 
-A unidade fundamental do domínio. Representa um movimento ou técnica ensinável de forma independente.
+The fundamental domain unit. Represents a teachable movement or technique that can exist independently.
 
-| Atributo | Tipo | Descrição |
+| Attribute | Type | Description |
 |---|---|---|
-| `id` | `string` | Identificador único (slug usado na URL e nas referências do grafo) |
-| `name` | `string` | Nome do passo |
-| `description` | `string` | Descrição do movimento e intenção coreográfica |
-| `youtubeVideos` | `string[]` | Lista de IDs de vídeos no YouTube |
-| `localVideos` | `VideoSource[]` | Lista de vídeos locais com metadados extras (câmera, duração, apresentador) |
-| `tags` | `string[]` | Palavras-chave para busca e agrupamento |
-| `difficulty` | `0–5` | Complexidade conceitual/técnica do passo — definida na criação, não muda com o treino |
-| `trainingNotes` | `string?` | Notas livres de treino (dicas, lembretes, observações pessoais) |
-| `learningLevel` | `0–5` | Estado atual de domínio do praticante — evolui com o treino |
+| `id` | `string` | Unique identifier (slug used in URL and graph references) |
+| `name` | `string` | Step name |
+| `description` | `string` | Description of the movement and choreographic intention |
+| `youtubeVideos` | `string[]` | List of YouTube video IDs |
+| `localVideos` | `VideoSource[]` | List of local videos with optional metadata (camera angle, duration, presenter) |
+| `tags` | `string[]` | Keywords for search and grouping |
+| `difficulty` | `0–5` | Conceptual/technical complexity of the step — set at creation, never changes with practice |
+| `trainingNotes` | `string?` | Free-form training notes (tips, reminders, personal observations) |
+| `learningLevel` | `0–5` | Current state of practitioner's mastery — evolves with practice |
 
-**Diferença entre `difficulty` e `learningLevel`:**
-- `difficulty` é uma propriedade do passo em si — indica o quão complexo ele é objetivamente. Não muda.
-- `learningLevel` é uma propriedade do praticante em relação ao passo — indica quanto já foi internalizado. Evolui com prática.
+**Difference between `difficulty` and `learningLevel`:**
+- `difficulty` is a property of the step itself — indicates how objectively complex it is. Never changes.
+- `learningLevel` is a property of the practitioner in relation to the step — indicates how much has been internalized. Evolves with practice.
 
 ---
 
 ## 2. Hub
 
-Um Hub é um **tipo especial de Passo de Dança** — tem todos os atributos de `DanceStep` e adiciona semântica de grafo: é um nó central no mapa mental do estilo.
+A Hub is a **special type of Dance Step** — it has all attributes of `DanceStep` and adds graph semantics: it is a central node in the style's mental map.
 
-**Um passo pode ser um Hub, mas nem todo passo é um Hub.**
+**A step can be a Hub, but not every step is a Hub.**
 
-Atributos adicionais ao `DanceStep`:
+Additional attributes beyond `DanceStep`:
 
-| Atributo | Tipo | Descrição |
+| Attribute | Type | Description |
 |---|---|---|
-| `incomingSteps` | `string[]` | IDs de passos que *chegam* neste hub (transições de entrada) |
-| `outgoingSteps` | `string[]` | IDs de passos que *saem* deste hub (transições de saída) |
-| `icon` | `string` | Ícone visual para o nó no grafo |
-| `color` | `string` | Cor CSS para identidade visual no grafo |
+| `incomingSteps` | `string[]` | IDs of steps that *arrive at* this hub (entry transitions) |
+| `outgoingSteps` | `string[]` | IDs of steps that *leave from* this hub (exit transitions) |
+| `icon` | `string` | Visual icon for the node in the graph |
+| `color` | `string` | CSS color for visual identity in the graph |
 
-Hubs são os **pontos de ancoragem** do `FlowMap`. Passos não-hub podem existir no catálogo sem aparecer no grafo.
+Hubs are the **anchoring points** of `FlowMap`. Non-hub steps can exist in the catalog without appearing in the graph.
 
 ---
 
 ## 3. Flow
 
-Um Flow é um **caminho ordenado entre Passos de Dança** (hubs ou não), representando uma sequência comum ou coreografia de referência.
+A Flow is an **ordered path through Dance Steps** (hubs or non-hubs), representing a common sequence or reference choreography.
 
-| Atributo | Tipo | Descrição |
+| Attribute | Type | Description |
 |---|---|---|
-| `id` | `string` | Identificador único |
-| `name` | `string` | Nome descritivo da sequência |
-| `description` | `string` | Contexto e intenção do fluxo |
-| `sequence` | `string[]` | Lista ordenada de IDs de passos (define o caminho no grafo) |
-| `difficulty` | `0–5` | Complexidade da sequência como um todo |
-| `learningLevel` | `0–5` | Nível atual de domínio do praticante para este fluxo específico |
-| `videos` | `VideoSource[]?` | Vídeos dedicados à demonstração do fluxo completo |
+| `id` | `string` | Unique identifier |
+| `name` | `string` | Descriptive name of the sequence |
+| `description` | `string` | Context and intention of the flow |
+| `sequence` | `string[]` | Ordered list of step IDs (defines the path in the graph) |
+| `difficulty` | `0–5` | Complexity of the sequence as a whole |
+| `learningLevel` | `0–5` | Current state of practitioner's mastery for this specific flow |
+| `videos` | `VideoSource[]?` | Videos dedicated to demonstrating the complete flow |
 
-Um Flow é modelado como um **grafo direcionado**: cada elemento de `sequence` aponta para o próximo. O grafo pode ter ramificações futuras (sequências alternativas).
+A Flow is modeled as a **directed graph**: each element in `sequence` points to the next. The graph can have future branching (alternative sequences).
 
 ---
 
 ## 4. DanceStyle
 
-Agrupa tudo pertencente a um estilo de dança (Zouk, Bachata, Samba…). É o ponto de entrada de todos os dados.
+Groups everything belonging to a dance style (Zouk, Bachata, Samba…). It's the entry point for all data.
 
-| Atributo | Tipo | Descrição |
+| Attribute | Type | Description |
 |---|---|---|
-| `id` | `string` | Slug único (ex: `'zouk'`) — usado na URL e como `styleId` nos passos |
-| `name` | `string` | Nome de exibição (ex: `'Zouk Brasileiro'`) |
-| `description` | `string` | Descrição curta do estilo |
-| `icon` | `string` | Emoji ou caractere representativo |
-| `color` | `string` | Cor primária da marca do estilo |
-| `accentColor` | `string?` | Cor de destaque para CTAs e estados ativos — padrão `color` |
-| `steps` | `DanceStep[]` | Catálogo completo de passos do estilo |
-| `hubs` | `Hub[]` | Subconjunto de passos que são Hubs (nós do FlowMap) |
-| `flows` | `Flow[]` | Sequências de referência definidas para o estilo |
+| `id` | `string` | Unique slug (e.g., `'zouk'`) — used in URL and as `styleId` in steps |
+| `name` | `string` | Display name (e.g., `'Zouk Brasileiro'`) |
+| `description` | `string` | Brief style description |
+| `icon` | `string` | Emoji or representative character |
+| `color` | `string` | Primary brand color of the style |
+| `accentColor` | `string?` | Highlight color for CTAs and active states — defaults to `color` |
+| `steps` | `DanceStep[]` | Complete catalog of steps in the style |
+| `hubs` | `Hub[]` | Subset of steps that are Hubs (FlowMap nodes) |
+| `flows` | `Flow[]` | Reference sequences defined for the style |
 
 ---
 
-## Relações entre os conceitos
+## Relationships Between Concepts
 
 ```
 DanceStyle
-├── steps[]          → lista completa de DanceStep
-│     └── (alguns steps são Hubs)
-├── hubs[]           → subconjunto de DanceStep com semântica de grafo
-│     ├── incomingSteps[]  → referências a DanceStep.id
-│     └── outgoingSteps[]  → referências a DanceStep.id
+├── steps[]          → complete list of DanceStep
+│     └── (some steps are Hubs)
+├── hubs[]           → subset of DanceStep with graph semantics
+│     ├── incomingSteps[]  → references to DanceStep.id
+│     └── outgoingSteps[]  → references to DanceStep.id
 └── flows[]          → Flow
-      └── sequence[] → referências ordenadas a DanceStep.id (hubs ou não)
+      └── sequence[] → ordered references to DanceStep.id (hubs or not)
 ```
 
-**Um Hub é um DanceStep** — não é uma entidade separada. A distinção é que hubs participam do grafo e têm referências direcionais a outros passos.
+**A Hub is a DanceStep** — it's not a separate entity. The distinction is that hubs participate in the graph and have directional references to other steps.
 
-**Um Flow é um caminho no grafo** — referencia passos pelo `id`, independente de serem hubs ou não. Pode ter seu próprio material de vídeo.
+**A Flow is a path in the graph** — it references steps by `id`, regardless of whether they are hubs. It can have its own video material.
 
 ---
 
-## Notas de modelagem
+## Modeling Notes
 
-- `difficulty` e `learningLevel` existem tanto em `DanceStep` quanto em `Flow`, com a mesma semântica: dificuldade objetiva vs. nível subjetivo do praticante.
-- O progresso de treino (`learningLevel`, `trainingNotes`, histórico de revisões) deve ser separado dos dados estáticos do passo — fica em `TrainingProgress` persistido em `localStorage`, não no catálogo.
-- Um passo pode ter múltiplas gravações de vídeo (`VideoSource[]`), incluindo ângulos, câmeras e apresentadores diferentes. Flows também podem ter vídeos dedicados mostrando a sequência completa.
+- `difficulty` and `learningLevel` exist both in `DanceStep` and in `Flow`, with the same semantics: objective difficulty vs. subjective practitioner level.
+- Training progress (`learningLevel`, `trainingNotes`, review history) should be separated from the step's static data — it lives in `TrainingProgress` persisted in `localStorage`, not in the catalog.
+- A step can have multiple video recordings (`VideoSource[]`), including different angles, camera positions, and presenters. Flows can also have dedicated videos showing the complete sequence.

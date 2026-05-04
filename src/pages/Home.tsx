@@ -1,9 +1,13 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { VideoCard } from '../components/VideoCard'
 import { AnimatedSection } from '../components/AnimatedSection'
+import { StepTable } from '../components/StepTable'
+import type { StepSortCol } from '../components/StepTable'
 import { useActiveStyle } from '../context/StyleContext'
 import type { DanceStep } from '../types'
+import './Home.css'
 
 // Zouk-specific category color overrides — falls back to style accent for unknown categories
 const CAT_ACTIVE: Record<string, { bg: string; color: string; border: string }> = {
@@ -17,8 +21,6 @@ const CAT_ACTIVE: Record<string, { bg: string; color: string; border: string }> 
   'Finalizações':                     { bg: 'rgba(0,230,118,0.15)',  color: '#00875a', border: '#00e676' },
 }
 
-const P = "'Poppins', sans-serif"
-
 export function Home() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -27,6 +29,18 @@ export function Home() {
   const accent = activeStyle.accentColor ?? activeStyle.color
 
   const [hoveredStrip, setHoveredStrip] = useState<string | null>(null)
+  const [view, setView] = useState<'grid' | 'lista'>('grid')
+  const [sortBy, setSortBy] = useState<StepSortCol | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  function handleSort(col: StepSortCol) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(col)
+      setSortDir('asc')
+    }
+  }
 
   const categories = useMemo(() => {
     const cats = new Set(styleSteps.map((s) => s.category))
@@ -64,43 +78,47 @@ export function Home() {
     })
   }, [styleSteps, activeCategory, query])
 
+  const sortedSteps = useMemo(() => {
+    if (!sortBy) return filtered
+    return [...filtered].sort((a, b) => {
+      const av = sortBy === 'difficulty' ? a.difficulty : sortBy === 'duration' ? (a.duration ?? '') : a[sortBy]
+      const bv = sortBy === 'difficulty' ? b.difficulty : sortBy === 'duration' ? (b.duration ?? '') : b[sortBy]
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filtered, sortBy, sortDir])
+
   return (
     <div>
       {/* ── HERO ────────────────────────────────────────────── */}
       {!query && (
-        <section style={{ background: '#f0f4ff', position: 'relative', overflow: 'hidden' }}>
+        <section className="home-hero">
           {/* dot grid */}
-          <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none',
-            backgroundImage: 'radial-gradient(circle, #b39ddb33 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }} />
+          <div className="home-hero__dot-grid" />
 
-          <div className="page-wrap relative z-10" style={{ paddingTop: '64px', paddingBottom: 0 }}>
+          <div className="page-wrap relative z-10 home-hero__wrap">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.6fr] gap-8 items-center">
 
               {/* Left: text */}
               <AnimatedSection direction="right" delay={0}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.45em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div className="home-hero__text">
+                <p className="home-hero__label">
                   Biblioteca de Passos de {activeStyle.name}
                 </p>
-                <h1 style={{ fontFamily: P, fontWeight: 900, lineHeight: 0.92, fontSize: 'clamp(3.6rem,9.5vw,7rem)', letterSpacing: '-0.03em' }}>
-                  <span style={{ display: 'block', color: '#4a4e6b' }}>{activeStyle.name}</span>
-                  <span style={{ display: 'block', background: 'linear-gradient(90deg, #00c9a7, #4fc3f7, #b39ddb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>STEPS</span>
+                <h1 className="home-hero__title">
+                  <span className="home-hero__title-name">{activeStyle.name}</span>
+                  <span className="home-hero__title-steps">STEPS</span>
                 </h1>
-                <p style={{ fontFamily: P, fontSize: '12px', lineHeight: 1.7, color: '#4a4e6b', maxWidth: '260px' }}>
+                <p className="home-hero__desc">
                   Do básico às finalizações avançadas. Acompanhe seu progresso pessoal e domine cada passo.
                 </p>
                 <Link
                   to="/training"
+                  className="home-hero__cta"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    fontFamily: P, fontSize: '12px', letterSpacing: '0.15em', fontWeight: 700,
-                    textTransform: 'uppercase', color: '#ffffff', textDecoration: 'none',
-                    background: accent, padding: '12px 24px', borderRadius: '50px',
-                    boxShadow: `0 4px 16px ${accent}60`, width: 'fit-content',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    background: accent,
+                    boxShadow: `0 4px 16px ${accent}60`,
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${accent}70` }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 16px ${accent}60` }}
@@ -117,24 +135,22 @@ export function Home() {
               <AnimatedSection direction="left" delay={0.1}>
               <Link
                 to={`/video/${highlights[0]?.id}`}
-                className="group relative overflow-hidden block"
-                style={{ borderRadius: '20px', aspectRatio: '4/3', boxShadow: '0 8px 40px rgba(26,29,59,0.15)' }}
+                className="group relative overflow-hidden block home-hero__card"
               >
                 <FeaturedThumb step={highlights[0]} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,29,59,0.85) 0%, rgba(26,29,59,0.05) 55%, transparent 100%)' }} />
+                <div className="home-hero__card-overlay" />
                 <div
-                  className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100"
-                  style={{ background: '#f5a623', boxShadow: '0 4px 16px rgba(245,166,35,0.5)' }}
+                  className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100 home-hero__card-play"
                 >
-                  <svg className="w-5 h-5 ml-0.5" style={{ color: '#fff' }} fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 ml-0.5 home-hero__card-play-icon" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A.998.998 0 0 0 8 6.82z" />
                   </svg>
                 </div>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, padding: '20px' }}>
-                  <span style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.3em', fontWeight: 700, textTransform: 'uppercase', color: '#f5a623' }}>
+                <div className="home-hero__card-info">
+                  <span className="home-hero__card-category">
                     {highlights[0]?.category}
                   </span>
-                  <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '20px', color: '#ffffff', marginTop: '4px', lineHeight: 1.25 }}>
+                  <h3 className="home-hero__card-name">
                     {highlights[0]?.name}
                   </h3>
                 </div>
@@ -147,19 +163,19 @@ export function Home() {
 
       {/* ── EM DESTAQUE ─────────────────────────────────────── */}
       {!query && (
-        <section style={{ background: '#ffffff', paddingTop: '72px' }}>
+        <section className="home-featured">
           <div className="page-wrap">
             <AnimatedSection>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div className="home-featured__header">
               <div>
-                <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.4em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                <p className="home-featured__label">
                   Seleção aleatória
                 </p>
-                <h2 style={{ fontFamily: P, fontWeight: 900, fontSize: 'clamp(32px, 5vw, 56px)', color: '#1a1d3b', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                <h2 className="home-featured__title">
                   Em Destaque
                 </h2>
               </div>
-              <span style={{ fontFamily: P, fontSize: '11px', letterSpacing: '0.18em', color: '#8b95b8', textTransform: 'uppercase', paddingBottom: '6px', fontWeight: 500 }}>
+              <span className="home-featured__note">
                 Troca a cada visita
               </span>
             </div>
@@ -167,43 +183,37 @@ export function Home() {
 
             {/* Accordion strip */}
             <AnimatedSection delay={0.1}>
-            <div style={{ display: 'flex', height: '300px', gap: '6px' }}>
+            <div className="home-strip">
               {highlights.slice(1).map((s) => (
                 <Link
                   key={s.id}
                   to={`/video/${s.id}`}
                   onMouseEnter={() => setHoveredStrip(s.id)}
                   onMouseLeave={() => setHoveredStrip(null)}
-                  className="group relative overflow-hidden block"
+                  className="group relative overflow-hidden block home-strip__item"
                   style={{
-                    borderRadius: '16px',
                     flexGrow: hoveredStrip === s.id ? 3 : (hoveredStrip ? 0.55 : 1),
-                    flexShrink: 1,
-                    flexBasis: 0,
-                    minWidth: 0,
                     filter: hoveredStrip === s.id ? 'none' : 'saturate(0.5) brightness(0.9)',
-                    transition: 'flex-grow 0.45s cubic-bezier(0.4,0,0.2,1), filter 0.4s ease',
-                    textDecoration: 'none',
                   }}
                 >
                   <FeaturedThumb step={s} />
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(26,29,59,0.82) 0%, transparent 60%)',
-                    opacity: hoveredStrip === s.id ? 1 : 0,
-                    transition: 'opacity 0.3s',
-                  }} />
-                  <div style={{
-                    position: 'absolute', bottom: 0, left: 0, padding: '14px',
-                    opacity: hoveredStrip === s.id ? 1 : 0,
-                    transform: hoveredStrip === s.id ? 'translateY(0)' : 'translateY(8px)',
-                    transition: 'opacity 0.25s 0.1s, transform 0.25s 0.1s',
-                  }}>
-                    <span style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, color: '#f5a623' }}>
+                  <div
+                    className="home-strip__overlay"
+                    style={{
+                      opacity: hoveredStrip === s.id ? 1 : 0,
+                    }}
+                  />
+                  <div
+                    className="home-strip__info"
+                    style={{
+                      opacity: hoveredStrip === s.id ? 1 : 0,
+                      transform: hoveredStrip === s.id ? 'translateY(0)' : 'translateY(8px)',
+                    }}
+                  >
+                    <span className="home-strip__category">
                       {s.category}
                     </span>
-                    <p style={{ fontFamily: P, fontSize: '14px', fontWeight: 700, color: '#fff', marginTop: '3px', lineHeight: 1.25,
-                      overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <p className="home-strip__name">
                       {s.name}
                     </p>
                   </div>
@@ -216,45 +226,48 @@ export function Home() {
       )}
 
       {/* ── LIBRARY ─────────────────────────────────────────── */}
-      <section style={{ background: '#ffffff', paddingTop: query ? '40px' : '72px', paddingBottom: '100px' }}>
+      <section className="home-library" style={{ paddingTop: query ? '40px' : '72px' }}>
         <div className="page-wrap">
 
           {query ? (
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '40px' }}>
+            <div className="home-search__header">
               <div>
-                <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.3em', color: '#00c9a7', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>Busca</p>
-                <h2 style={{ fontFamily: P, fontWeight: 900, fontSize: 'clamp(28px, 5vw, 52px)', color: '#1a1d3b', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                <p className="home-search__label">Busca</p>
+                <h2 className="home-search__title">
                   "{query}"
                 </h2>
-                <p style={{ fontFamily: P, fontSize: '12px', color: '#8b95b8', marginTop: '6px' }}>
+                <p className="home-search__count">
                   {filtered.length} passo{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <button
-                onClick={() => navigate('/')}
-                style={{ fontFamily: P, fontSize: '12px', fontWeight: 600, color: '#f5a623', background: 'none', border: 'none', cursor: 'pointer', marginTop: '4px' }}
-              >
-                ← Limpar
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ViewToggle view={view} setView={setView} accent={accent} />
+                <button onClick={() => navigate('/')} className="home-search__clear">
+                  ← Limpar
+                </button>
+              </div>
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '28px' }}>
+              <div className="home-library__header">
                 <div>
-                  <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.4em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <p className="home-library__label">
                     Todos os passos
                   </p>
-                  <h2 style={{ fontFamily: P, fontWeight: 900, fontSize: 'clamp(28px, 4vw, 48px)', color: '#1a1d3b', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                  <h2 className="home-library__title">
                     Nossa Biblioteca
                   </h2>
                 </div>
-                <Link to="/training" style={{ fontFamily: P, fontSize: '12px', letterSpacing: '0.15em', fontWeight: 700, textTransform: 'uppercase', color: '#f5a623', textDecoration: 'none', paddingBottom: '4px' }}>
-                  Fila de treino →
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <ViewToggle view={view} setView={setView} accent={accent} />
+                  <Link to="/training" className="home-library__link">
+                    Fila de treino →
+                  </Link>
+                </div>
               </div>
 
               {/* Filter chips */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '44px' }}>
+              <div className="home-chips">
                 {categories.map((cat) => {
                   const isActive = activeCategory === cat
                   const ac = CAT_ACTIVE[cat] ?? {
@@ -266,11 +279,9 @@ export function Home() {
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
+                      className="home-chip"
                       style={{
-                        fontFamily: P, fontSize: '11px', letterSpacing: '0.1em', fontWeight: 600,
-                        textTransform: 'uppercase', padding: '7px 16px', borderRadius: '50px',
                         border: `1px solid ${isActive ? ac.border : '#dde3f5'}`,
-                        cursor: 'pointer', transition: 'all 0.15s',
                         background: isActive ? ac.bg : '#ffffff',
                         color: isActive ? ac.color : '#4a4e6b',
                       }}
@@ -283,18 +294,44 @@ export function Home() {
             </>
           )}
 
-          {/* Video grid */}
-          {filtered.length > 0 ? (
-            <AnimatedSection>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-              {filtered.map((step) => (
-                <VideoCard key={step.id} video={step} />
-              ))}
-            </div>
-            </AnimatedSection>
+          {/* Video grid / list */}
+          {sortedSteps.length > 0 ? (
+            <AnimatePresence mode="wait">
+              {view === 'grid' ? (
+                <motion.div
+                  key="grid"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+                    {sortedSteps.map((step) => (
+                      <VideoCard key={step.id} video={step} />
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="lista"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <StepTable
+                    steps={sortedSteps}
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    accentColor={accent}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           ) : (
-            <div style={{ paddingTop: '80px', paddingBottom: '80px', textAlign: 'center' }}>
-              <p style={{ color: '#8b95b8', fontFamily: P }}>Nenhum passo encontrado.</p>
+            <div className="home-empty">
+              <p className="home-empty__text">Nenhum passo encontrado.</p>
             </div>
           )}
         </div>
@@ -302,23 +339,18 @@ export function Home() {
 
       {/* ── FOOTER BAND ─────────────────────────────────────── */}
       {!query && (
-        <div style={{ background: '#f0f4ff', borderTop: '1px solid #dde3f5', padding: '64px 0' }}>
+        <div className="home-footer">
           <div className="page-wrap flex flex-col sm:flex-row items-start sm:items-end justify-between gap-8">
-            <h2 style={{
-              fontFamily: P, fontWeight: 900, fontSize: 'clamp(40px, 8vw, 110px)',
-              lineHeight: 0.9, letterSpacing: '-0.03em', textTransform: 'uppercase',
-              background: 'linear-gradient(135deg, #1a1d3b 0%, #b39ddb 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>
-              FIRST<br /><span style={{ background: 'linear-gradient(90deg, #f5a623, #f06292)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>STEPS</span>
+            <h2 className="home-footer__title">
+              FIRST<br /><span className="home-footer__title-accent">STEPS</span>
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '8px' }}>
-              <p style={{ fontFamily: P, fontSize: '12px', color: '#8b95b8', letterSpacing: '0.06em' }}>
+            <div className="home-footer__meta">
+              <p className="home-footer__desc">
                 Biblioteca pessoal de Zouk
               </p>
               <Link
                 to="/training"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: P, fontSize: '11px', letterSpacing: '0.2em', fontWeight: 700, textTransform: 'uppercase', color: '#f5a623', textDecoration: 'none' }}
+                className="home-footer__link"
               >
                 Fila de Treino
                 <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,26 +365,66 @@ export function Home() {
   )
 }
 
+const P = "'Poppins', sans-serif"
+
+function ViewToggle({
+  view,
+  setView,
+  accent,
+}: {
+  view: 'grid' | 'lista'
+  setView: (v: 'grid' | 'lista') => void
+  accent: string
+}) {
+  const options = [
+    { key: 'grid' as const,  label: '⊞ Grade' },
+    { key: 'lista' as const, label: '☰ Lista'  },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      {options.map(({ key, label }) => {
+        const active = view === key
+        return (
+          <button
+            key={key}
+            onClick={() => setView(key)}
+            style={{
+              fontFamily: P,
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              padding: '7px 14px',
+              borderRadius: '50px',
+              border: `1.5px solid ${active ? accent : '#dde3f5'}`,
+              background: active ? `${accent}1a` : '#ffffff',
+              color: active ? accent : '#4a4e6b',
+              cursor: 'pointer',
+              transition: 'all 0.18s',
+            }}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function FeaturedThumb({ step }: { step: DanceStep | undefined }) {
-  if (!step) return <div style={{ width: '100%', height: '100%', background: '#dde3f5' }} />
+  if (!step) return <div className="home-thumb__empty" />
   const firstYT = step.youtubeVideos.find((id) => id !== '')
   if (firstYT) {
     return (
       <img
         src={`https://img.youtube.com/vi/${firstYT}/maxresdefault.jpg`}
         alt={step.name}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        className="group-hover:scale-105 transition-transform duration-500"
+        className="home-thumb__img group-hover:scale-105 transition-transform duration-500"
       />
     )
   }
   return (
-    <div style={{
-      width: '100%', height: '100%',
-      background: 'linear-gradient(135deg, #dde3f5 0%, #eef2ff 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <svg width="40" height="40" style={{ color: '#b39ddb' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="home-thumb__placeholder">
+      <svg width="40" height="40" className="home-thumb__placeholder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
           d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
       </svg>

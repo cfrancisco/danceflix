@@ -1,0 +1,457 @@
+/* ── FlowMap.css ── BEM-ish with .fmap- prefix ── */
+
+/* ── Page wrapper ── */
+.fmap-page {
+  background: #f0f4ff;
+  min-height: 100vh;
+  flex-direction: column;
+  /* display, height, overflow are view-dependent → stay inline */
+}
+
+/* ── Header ── */
+.fmap-header {
+  background: rgba(240, 244, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #dde3f5;
+  padding: 16px 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  z-index: 10;
+  position: relative;
+  overflow: hidden;
+}
+
+.fmap-header__dot-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #b39ddb18 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.fmap-header__label-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fmap-header__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  color: #00c9a7;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fmap-header__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.fmap-header__title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 900;
+  font-size: 40px;
+  color: #1a1d3b;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.fmap-header__title-accent {
+  background: linear-gradient(90deg, #f5a623, #f06292);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.fmap-header__stats {
+  margin-top: auto;
+  margin-bottom: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  color: #b39ddb;
+}
+
+.fmap-header__toggle-wrap {
+  position: relative;
+}
+
+/* ── Rede view ── */
+.fmap-rede {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* ── Lista view ── */
+.fmap-lista {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 100px;
+}
+
+/* ── Flow selector ── */
+.fmap-flows {
+  margin-bottom: 40px;
+}
+
+.fmap-flows__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: #00c9a7;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.fmap-flows__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.fmap-flows__btn {
+  padding: 16px;
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  /* border & background are state-dependent → stay inline */
+}
+
+.fmap-flows__btn-name {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #1a1d3b;
+  margin-bottom: 4px;
+}
+
+.fmap-flows__btn-level {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #8b95b8;
+}
+
+/* ── Current flow panel ── */
+.fmap-current {
+  margin-bottom: 48px;
+  padding: 24px;
+  background: #f0f4ff;
+  border-radius: 16px;
+  border: 1px solid #dde3f5;
+}
+
+.fmap-current__title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: #1a1d3b;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.fmap-current__desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #4a4e6b;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.fmap-current__steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+/* ── Step button ── */
+.fmap-step-btn__wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.fmap-step-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  width: 100px;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+  /* border, background, cursor are state-dependent → stay inline */
+}
+
+.fmap-step-btn__thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  /* border-color is dynamic → stay inline */
+}
+
+.fmap-step-btn__thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fmap-step-btn__icon {
+  font-size: 22px;
+}
+
+.fmap-step-btn__name {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a1d3b;
+  text-align: center;
+  max-width: 80px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.fmap-step-btn__dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0.7;
+  /* background is dynamic (hub.color) → stay inline */
+}
+
+/* ── Arrow between steps ── */
+.fmap-step-arrow {
+  color: #b39ddb;
+  flex-shrink: 0;
+}
+
+/* ── Expanded hub panel ── */
+.fmap-expanded {
+  margin-bottom: 40px;
+  padding: 24px;
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: 16px;
+  background: rgba(245, 166, 35, 0.04);
+}
+
+/* ── HubDetails component ── */
+.fmap-hub-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.fmap-hub-detail__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fmap-hub-detail__icon {
+  font-size: 36px;
+}
+
+.fmap-hub-detail__title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: #1a1d3b;
+  letter-spacing: -0.01em;
+}
+
+.fmap-hub-detail__desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #4a4e6b;
+}
+
+.fmap-hub-detail__close {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #8b95b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.fmap-hub-detail__link-wrap {
+  margin-bottom: 16px;
+}
+
+.fmap-hub-detail__link {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1d3b;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #dde3f5;
+  background: #ffffff;
+  text-decoration: none;
+  transition: all 0.15s;
+  display: inline-block;
+}
+
+.fmap-hub-detail__connections {
+  display: grid;
+  gap: 20px;
+  /* grid-template-columns is dynamic → stay inline */
+}
+
+.fmap-hub-detail__conn-label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: #8b95b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.fmap-hub-detail__conn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fmap-hub-detail__conn-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #dde3f5;
+  background: #f0f4ff;
+}
+
+.fmap-hub-detail__conn-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.fmap-hub-detail__conn-icon {
+  font-size: 18px;
+}
+
+.fmap-hub-detail__conn-name {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1d3b;
+}
+
+/* ── All Hubs grid ── */
+.fmap-hubs-grid__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: #00c9a7;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.fmap-hubs-grid__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.fmap-hubs-grid__card {
+  text-align: left;
+  padding: 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  /* border & background are state-dependent → stay inline */
+}
+
+.fmap-hubs-grid__card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.fmap-hubs-grid__card-icon {
+  font-size: 28px;
+}
+
+.fmap-hubs-grid__card-badge {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b95b8;
+  padding: 2px 8px;
+  border: 1px solid #dde3f5;
+  border-radius: 20px;
+}
+
+.fmap-hubs-grid__card-name {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: #1a1d3b;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.fmap-hubs-grid__card-desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #4a4e6b;
+  line-height: 1.5;
+}
+
+.fmap-hubs-grid__card-notes {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  color: #b39ddb;
+  font-style: italic;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dde3f5;
+}
+
+/* ── View toggle ── */
+.fmap-view-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.fmap-view-toggle__btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.18s;
+  /* border, background, color are state-dependent → stay inline */
+}

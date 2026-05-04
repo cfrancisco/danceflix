@@ -1,0 +1,16 @@
+.ct-tag {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  display: inline-block;
+  white-space: nowrap;
+  padding: 2px 9px;
+  font-size: 10px;
+}
+
+.ct-tag--md {
+  padding: 5px 14px;
+  font-size: 12px;
+}
