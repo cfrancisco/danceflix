@@ -408,6 +408,39 @@
   text-decoration: none;
 }
 
+/* ── HEADER ACTION ROWS ───────────────────────────────── */
+
+.home-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-header__actions--wide {
+  gap: 12px;
+}
+
+/* ── VIEW TOGGLE ──────────────────────────────────────── */
+
+.home-view-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.home-view-toggle__btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 7px 14px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-bg-card);
+  color: var(--c-text);
+}
+
 /* ── FEATURED THUMB ───────────────────────────────────── */
 
 .home-thumb__empty {

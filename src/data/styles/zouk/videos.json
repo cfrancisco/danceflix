@@ -1,0 +1,242 @@
+[
+  {
+    "id": "zouk-vid-001",
+    "title": "Básico - Passos Iniciantes",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Basico - Passos Iniciantes.mp4",
+    "steps": [
+      {
+        "stepId": "base-1"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-002",
+    "title": "Caminhada na Base Frente e Trás",
+    "styleId": "zouk",
+    "youtubeId": "I4Rr9oiQt4Q",
+    "steps": [
+      {
+        "stepId": "caminhada-frente-tras"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-003",
+    "title": "Caminhada em S com Cambrê",
+    "styleId": "zouk",
+    "youtubeId": "wSuq3dkEDrM",
+    "steps": [
+      {
+        "stepId": "caminhada-em-s"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-004",
+    "title": "Avançado - Técnica Difícil",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Avançado - Algo mto dificil.mp4",
+    "steps": [
+      {
+        "stepId": "caminhada-em-s"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-005",
+    "title": "Cruzeta (Corredor)",
+    "styleId": "zouk",
+    "youtubeId": "bAKqTWQWbrU",
+    "steps": [
+      {
+        "stepId": "abertura-2"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-006",
+    "title": "Intermediário - Giro Triplo",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Intermediario - Giro Triplo.mp4",
+    "steps": [
+      {
+        "stepId": "giro-dama-simples"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-007",
+    "title": "Giro de Cintura com Bloqueio",
+    "styleId": "zouk",
+    "youtubeId": "O5NTwj__rmE",
+    "steps": [
+      {
+        "stepId": "giro-cintura-bloqueio"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-008",
+    "title": "Ioiô",
+    "styleId": "zouk",
+    "youtubeId": "LXidkwrhzS0",
+    "steps": [
+      {
+        "stepId": "ioio"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-009",
+    "title": "Intermediário - Giros Deslocando",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Intermediario - Giros deslocando.mp4",
+    "steps": [
+      {
+        "stepId": "ioio"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-010",
+    "title": "Chicote e Chicote com Cabeça",
+    "styleId": "zouk",
+    "youtubeId": "uydaAgtcidI",
+    "steps": [
+      {
+        "stepId": "chicote"
+      },
+      {
+        "stepId": "chicote-com-cabeca"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-011",
+    "title": "Raul",
+    "styleId": "zouk",
+    "youtubeId": "EHJ1wpsh-Os",
+    "steps": [
+      {
+        "stepId": "raul"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-012",
+    "title": "Giro Deslocado, Patinha e Mergulho",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Intermediario - Giro Deslocado, Patinha, Caminhada Tras e Mergulho.mp4",
+    "steps": [
+      {
+        "stepId": "giro-12"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-013",
+    "title": "Onda (Body Wave)",
+    "styleId": "zouk",
+    "youtubeId": "02AOUA1NOMI",
+    "steps": [
+      {
+        "stepId": "onda"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-014",
+    "title": "Intermediário - Movimentos Corporais",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Intermediario - Corporais.mp4",
+    "steps": [
+      {
+        "stepId": "onda"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-015",
+    "title": "Cuca e Frango Assado",
+    "styleId": "zouk",
+    "youtubeId": "aWno9urO69k",
+    "steps": [
+      {
+        "stepId": "cuca"
+      },
+      {
+        "stepId": "frango-assado"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-016",
+    "title": "Caminhada e Mergulho com Cavalheiro Atrás",
+    "styleId": "zouk",
+    "videoUrl": "/videos/Intermediario - Caminhada e Mergulho com Cavalheiro atrás.mp4",
+    "steps": [
+      {
+        "stepId": "mergulho-bloqueio"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-017",
+    "title": "Cambrê e Cambrê Invertido",
+    "styleId": "zouk",
+    "youtubeId": "1hqW03deIlo",
+    "steps": [
+      {
+        "stepId": "cambre-simples"
+      }
+    ]
+  },
+  {
+    "id": "zouk-vid-019",
+    "title": "Lunge",
+    "styleId": "zouk",
+    "youtubeId": "RqK62OQ4qto",
+    "steps": [
+      {
+        "stepId": "lunge"
+      }
+    ]
+  },
+  {
+    "steps": [
+      {
+        "stepId": "oito-ativo"
+      }
+    ],
+    "title": "Caminhada na Base Frente e Trás",
+    "youtubeId": "I4Rr9oiQt4Q",
+    "styleId": "zouk",
+    "id": "vid_1778304044351_mzpo9",
+    "createdAt": "2026-05-09T05:20:44.351Z"
+  },
+  {
+    "steps": [],
+    "title": "Toalha",
+    "youtubeId": "HnIdtWX11w4",
+    "styleId": "zouk",
+    "id": "vid_1778445031842_862so",
+    "createdAt": "2026-05-10T20:30:31.843Z"
+  },
+  {
+    "steps": [],
+    "title": "Frango assado",
+    "description": "No Brazilian Zouk, a rotisserie ou \"roasted chicken\" é uma técnica que envolve giros horizontais fora de eixo, onde o corpo gira em torno de um eixo diagonal inclinado. Essa técnica, que pode ser realizada no local ou viajando, caracteriza-se pela abertura e fechamento da caixa torácica e pode ser combinada com outros movimentos.\n\nShorts: https://www.youtube.com/shorts/tBIV_R2SQIs",
+    "styleId": "zouk",
+    "id": "vid_1778445072411_banff",
+    "createdAt": "2026-05-10T20:31:12.411Z"
+  },
+  {
+    "steps": [],
+    "title": "Basico - 2",
+    "youtubeId": "dtJ26WoMax0",
+    "styleId": "zouk",
+    "id": "vid_1778461752078_qtnn3",
+    "createdAt": "2026-05-11T01:09:12.078Z"
+  }
+]

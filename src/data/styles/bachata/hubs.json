@@ -1,0 +1,42 @@
+[
+  {
+    "stepId": "bachata-base",
+    "icon": "🎵",
+    "color": "#DC2626",
+    "notes": "Fundamento de tudo na Bachata",
+    "incomingSteps": ["bachata-giros"],
+    "outgoingSteps": ["bachata-giros", "bachata-lateral", "bachata-footwork"]
+  },
+  {
+    "stepId": "bachata-giros",
+    "icon": "🌀",
+    "color": "#EF4444",
+    "notes": "Requer conexão firme na condução",
+    "incomingSteps": ["bachata-base"],
+    "outgoingSteps": ["bachata-base"]
+  },
+  {
+    "stepId": "bachata-lateral",
+    "icon": "↔️",
+    "color": "#B91C1C",
+    "notes": "Base para a maioria das combinações",
+    "incomingSteps": ["bachata-base"],
+    "outgoingSteps": ["bachata-sensual"]
+  },
+  {
+    "stepId": "bachata-sensual",
+    "icon": "💃",
+    "color": "#7F1D1D",
+    "notes": "Estilo de Bachata Sensual / Moderna",
+    "incomingSteps": ["bachata-lateral"],
+    "outgoingSteps": []
+  },
+  {
+    "stepId": "bachata-footwork",
+    "icon": "👣",
+    "color": "#F87171",
+    "notes": "Pode ser adicionado em qualquer momento",
+    "incomingSteps": ["bachata-base"],
+    "outgoingSteps": []
+  }
+]

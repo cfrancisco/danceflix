@@ -3,9 +3,14 @@
  * All existing components import from this file and continue to work unchanged.
  */
 export {
-  videos,
   steps,
   getVideoById,
+  getStepById,
   getRelatedVideos,
   getVideoThumbnail,
+  getEffectiveVideos,
+  getFirstYoutubeId,
+  hasYoutubeVideo,
+  getAllVideos,
+  getCatalogVideoById,
 } from './registry'

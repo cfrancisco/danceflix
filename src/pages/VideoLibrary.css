@@ -1,0 +1,566 @@
+/* VideoLibrary page — .vlb- prefix */
+
+.vlb-page {
+  background: #ffffff;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.vlb-header {
+  background: #f0f4ff;
+  border-bottom: 1px solid #dde3f5;
+  padding: 32px 0 24px;
+}
+
+.vlb-header__inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.vlb-header__top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.vlb-header__eyebrow {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.45em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #00c9a7;
+  margin-bottom: 4px;
+}
+
+.vlb-header__title {
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  color: #1a1d3b;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* ── Main ── */
+.vlb-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* ── Buttons ── */
+.vlb-btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vlb-btn--primary {
+  background: #1a1d3b;
+  color: #fff;
+  border: none;
+}
+
+.vlb-btn--primary:hover { background: #2d3163; }
+
+.vlb-btn--save {
+  background: #6d28d9;
+  color: #fff;
+  border: none;
+}
+
+.vlb-btn--save:hover { background: #5b21b6; }
+.vlb-btn--save:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.vlb-btn--cancel {
+  background: transparent;
+  border: 1px solid #dde3f5;
+  color: #8b95b8;
+}
+
+.vlb-btn--cancel:hover { background: #f0f4ff; }
+
+.vlb-btn--link-step {
+  background: transparent;
+  border: 1.5px solid #00c9a7;
+  color: #00c9a7;
+  font-size: 10px;
+  padding: 6px 14px;
+}
+
+.vlb-btn--link-step:hover { background: rgba(0, 201, 167, 0.08); }
+
+/* ── Form wrap ── */
+.vlb-form-wrap {
+  background: #f0f4ff;
+  border: 1px solid #dde3f5;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.vlb-form-wrap__title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1a1d3b;
+  margin-bottom: 20px;
+}
+
+/* ── Form fields ── */
+.vlb-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.vlb-form__row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.vlb-form__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #4a4e6b;
+}
+
+.vlb-form__input {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  color: #1a1d3b;
+  background: #fff;
+  border: 1.5px solid #dde3f5;
+  border-radius: 10px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.vlb-form__input:focus { border-color: #6d28d9; }
+
+.vlb-form__textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.vlb-form__hint {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  color: #8b95b8;
+}
+
+.vlb-form__hint--err { color: #dc2626; }
+
+.vlb-form__preview {
+  margin-bottom: 16px;
+}
+
+.vlb-form__thumb {
+  width: 160px;
+  border-radius: 8px;
+  display: block;
+}
+
+.vlb-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dde3f5;
+}
+
+/* ── Grid ── */
+.vlb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ── Card ── */
+.vlb-card {
+  background: #fff;
+  border: 1px solid #dde3f5;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s;
+}
+
+.vlb-card:hover {
+  box-shadow: 0 4px 20px rgba(26, 29, 59, 0.1);
+}
+
+.vlb-card__thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #1a1d3b;
+  flex-shrink: 0;
+}
+
+.vlb-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vlb-card__no-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1d3b 0%, #2d3163 100%);
+}
+
+.vlb-card__yt-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.vlb-card__yt-badge:hover { background: rgba(255, 0, 0, 0.8); }
+
+.vlb-card__body {
+  padding: 14px 16px;
+  flex: 1;
+}
+
+.vlb-card__title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1d3b;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.vlb-card__desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #8b95b8;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vlb-card__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vlb-card__no-steps {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  color: #aab0c8;
+  font-style: italic;
+}
+
+/* ── Step chips on cards ── */
+.vlb-step-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(109, 40, 217, 0.08);
+  border: 1px solid rgba(109, 40, 217, 0.2);
+  color: #6d28d9;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.vlb-step-chip:hover { background: rgba(109, 40, 217, 0.15); }
+
+.vlb-step-chip__ts {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* ── Card actions ── */
+.vlb-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid #f0f4ff;
+  justify-content: flex-end;
+}
+
+.vlb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #dde3f5;
+  background: transparent;
+  color: #8b95b8;
+  transition: all 0.15s;
+}
+
+.vlb-icon-btn:hover {
+  border-color: #4a4e6b;
+  color: #4a4e6b;
+}
+
+.vlb-icon-btn--danger { color: #dc2626; border-color: rgba(220, 38, 38, 0.3); }
+.vlb-icon-btn--danger:hover { background: rgba(220, 38, 38, 0.07); border-color: #dc2626; }
+
+.vlb-hold-delete {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.vlb-hold-delete:hover { border-color: #dc2626; background: rgba(220, 38, 38, 0.04); }
+.vlb-hold-delete::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(220, 38, 38, 0.18);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: none;
+}
+.vlb-hold-delete.is-holding::before {
+  transform: scaleX(1);
+  transition: transform 1.5s linear;
+}
+.vlb-hold-delete svg { position: relative; }
+
+/* ── Section label ── */
+.vlb-catalog-badge--edited {
+  background: rgba(245,158,11,0.12) !important;
+  border-color: rgba(245,158,11,0.4) !important;
+  color: #b45309 !important;
+}
+
+.vlb-section-label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #8b95b8;
+  margin-bottom: 16px;
+}
+
+/* ── Catalog card variant ── */
+.vlb-card--catalog {
+  opacity: 0.92;
+}
+
+.vlb-card--catalog:hover {
+  opacity: 1;
+}
+
+.vlb-card__catalog-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.vlb-btn--export {
+  background: transparent;
+  border: 1.5px solid rgba(109, 40, 217, 0.25);
+  color: #9b86c8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vlb-btn--export:hover {
+  background: rgba(109, 40, 217, 0.06);
+  border-color: rgba(109, 40, 217, 0.5);
+  color: #6d28d9;
+}
+
+.vlb-btn--export-active {
+  border-color: rgba(109, 40, 217, 0.6);
+  color: #6d28d9;
+}
+
+.vlb-btn--export-active:hover { border-color: #6d28d9; }
+
+.vlb-export-badge {
+  background: #6d28d9;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* ── Catalog card inline edit form ── */
+.vlb-catalog-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px !important;
+}
+
+.vlb-catalog-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vlb-catalog-edit__label {
+  font-family: 'Poppins', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8b95b8;
+}
+
+.vlb-catalog-edit__input {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  color: #1a1d3b;
+  background: #fff;
+  border: 1.5px solid #dde3f5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.vlb-catalog-edit__input:focus { border-color: #6d28d9; }
+
+.vlb-catalog-edit__textarea { resize: vertical; min-height: 52px; }
+
+.vlb-catalog-edit__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid #f0f4ff;
+}
+
+.vlb-catalog-badge {
+  font-family: 'Poppins', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(0, 201, 167, 0.12);
+  border: 1px solid rgba(0, 201, 167, 0.35);
+  color: #00a389;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vlb-header__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vlb-form__row > .vlb-form__field {
+  flex: 1;
+}
+
+/* ── Empty state ── */
+.vlb-empty {
+  text-align: center;
+  padding: 80px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vlb-empty__icon {
+  color: #b39ddb;
+  margin-bottom: 12px;
+}
+
+.vlb-empty__text {
+  font-family: 'Poppins', sans-serif;
+  color: #8b95b8;
+  font-size: 14px;
+}
+
+.vlb-empty__sub {
+  font-family: 'Poppins', sans-serif;
+  color: #aab0c8;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.vlb-no-thumb-icon {
+  color: #8b95b8;
+}
+
+.vlb-section-label--spaced {
+  margin-top: 40px;
+}

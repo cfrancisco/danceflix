@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { Level, TrainingProgress, DanceStep } from '../types'
 import { useTraining } from '../hooks/useTraining'
-
-const P = "'Poppins', sans-serif"
+import './TrainingPanel.css'
 
 const LEVEL_CONFIG: Record<Level, { description: string; color: string }> = {
   0: { description: 'Não praticado — nunca tentou',          color: '#8b95b8' },
@@ -42,30 +41,15 @@ export function TrainingPanel({ stepId, step }: TrainingPanelProps) {
     : null
 
   return (
-    <div style={{
-      borderRadius: '16px',
-      border: '1px solid #dde3f5',
-      background: '#f0f4ff',
-      padding: '24px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px',
-      marginBottom: '32px',
-    }}>
+    <div className="tp-panel">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <h2 style={{ fontFamily: P, fontWeight: 700, fontSize: '18px', color: '#1a1d3b' }}>
-          Rastreador de Treino
-        </h2>
+      <div className="tp-header">
+        <h2 className="tp-header__title">Rastreador de Treino</h2>
         {progress && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontFamily: P, fontSize: '12px', color: '#8b95b8' }}>
-              {progress.timesReviewed}× revisado
-            </span>
+          <div className="tp-header__meta">
+            <span className="tp-header__reviewed">{progress.timesReviewed}× revisado</span>
             {lastReviewed && (
-              <span style={{ fontFamily: P, fontSize: '12px', color: '#b39ddb' }}>
-                Último: {lastReviewed}
-              </span>
+              <span className="tp-header__last">Último: {lastReviewed}</span>
             )}
           </div>
         )}
@@ -73,29 +57,23 @@ export function TrainingPanel({ stepId, step }: TrainingPanelProps) {
 
       {/* Level selector */}
       <div>
-        <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b', marginBottom: '12px' }}>
-          Qual o seu <strong style={{ color: '#1a1d3b', fontWeight: 700 }}>nível de aprendizado</strong> neste passo?
+        <p className="tp-levels__prompt">
+          Qual o seu <strong>nível de aprendizado</strong> neste passo?
         </p>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div className="tp-levels">
           {([0, 1, 2, 3, 4, 5] as Level[]).map((lvl) => {
             const isSelected = selectedLevel === lvl
+            const cfg = LEVEL_CONFIG[lvl]
             return (
               <button
                 key={lvl}
                 onClick={() => setSelectedLevel(lvl)}
-                title={LEVEL_CONFIG[lvl].description}
+                title={cfg.description}
+                className="tp-levels__btn"
                 style={{
-                  flex: 1,
-                  height: '40px',
-                  borderRadius: '8px',
-                  border: `1px solid ${isSelected ? LEVEL_CONFIG[lvl].color : '#dde3f5'}`,
-                  background: isSelected ? LEVEL_CONFIG[lvl].color : '#ffffff',
+                  border: `1px solid ${isSelected ? cfg.color : '#dde3f5'}`,
+                  background: isSelected ? cfg.color : '#ffffff',
                   color: isSelected ? '#ffffff' : '#8b95b8',
-                  fontFamily: P,
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
                 }}
               >
                 {lvl}
@@ -103,28 +81,18 @@ export function TrainingPanel({ stepId, step }: TrainingPanelProps) {
             )
           })}
         </div>
-        <p style={{ fontFamily: P, fontSize: '12px', marginTop: '8px', color: LEVEL_CONFIG[selectedLevel].color }}>
+        <p className="tp-levels__desc" style={{ color: LEVEL_CONFIG[selectedLevel].color }}>
           {LEVEL_CONFIG[selectedLevel].description}
         </p>
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="tp-actions">
         <button
           onClick={handleMarkReviewed}
+          className="tp-actions__save"
           style={{
-            flex: 1,
-            padding: '11px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            fontFamily: P,
-            fontSize: '13px',
-            fontWeight: 700,
-            letterSpacing: '0.04em',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
             background: justSaved ? '#00c9a7' : '#f5a623',
-            color: '#ffffff',
             boxShadow: justSaved ? '0 4px 12px rgba(0,201,167,0.35)' : '0 4px 12px rgba(245,166,35,0.35)',
           }}
         >
@@ -135,25 +103,7 @@ export function TrainingPanel({ stepId, step }: TrainingPanelProps) {
           <button
             onClick={() => resetProgress(stepId)}
             title="Resetar progresso deste passo"
-            style={{
-              padding: '11px',
-              borderRadius: '10px',
-              border: '1px solid #dde3f5',
-              background: '#ffffff',
-              color: '#8b95b8',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#f06292'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#f06292'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#dde3f5'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#8b95b8'
-            }}
+            className="tp-actions__reset"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

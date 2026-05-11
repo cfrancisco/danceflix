@@ -30,6 +30,8 @@ export function CategoryTag({ category, size = 'sm' }: CategoryTagProps) {
         ...sizeStyle,
         fontFamily: "'Poppins', sans-serif",
         fontWeight: 600,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
         letterSpacing: '0.08em',
         textTransform: 'uppercase' as const,
         background: colors.bg,

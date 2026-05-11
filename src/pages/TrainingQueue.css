@@ -204,6 +204,10 @@
 }
 
 /* ── Training row ──────────────────────────────────────────────────────── */
+.tq-row:hover {
+  background: #f8f9ff;
+}
+
 .tq-row {
   display: flex;
   align-items: center;

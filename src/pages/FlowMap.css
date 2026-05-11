@@ -81,6 +81,9 @@
 
 .fmap-header__toggle-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ── Rede view ── */
@@ -437,6 +440,44 @@
   border-top: 1px solid #dde3f5;
 }
 
+/* ── Import / Export ── */
+.fm-io {
+  display: flex;
+  gap: 6px;
+}
+
+.fm-io__btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid #dde3f5;
+  background: #ffffff;
+  color: #4a4e6b;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.fm-io__btn:hover {
+  border-color: #00c9a7;
+  color: #00c9a7;
+  background: rgba(0, 201, 167, 0.06);
+}
+
+.fm-io__btn--import {
+  border-color: #b39ddb;
+  color: #b39ddb;
+}
+
+.fm-io__btn--import:hover {
+  border-color: #9c6fc9;
+  color: #9c6fc9;
+  background: rgba(179, 157, 219, 0.08);
+}
+
 /* ── View toggle ── */
 .fmap-view-toggle {
   display: flex;
@@ -453,5 +494,21 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.18s;
-  /* border, background, color are state-dependent → stay inline */
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-card);
+  color: var(--c-text);
+}
+.fmap-view-toggle__btn.is-active {
+  border-color: var(--c-amber);
+  background: rgba(245, 166, 35, 0.12);
+  color: var(--c-amber);
+}
+.fmap-view-toggle__btn:not(.is-active):hover {
+  border-color: rgba(245, 166, 35, 0.4);
+  color: var(--c-amber);
+}
+
+.fmap-hub-detail__link:hover {
+  border-color: var(--c-amber);
+  color: var(--c-amber-dark);
 }

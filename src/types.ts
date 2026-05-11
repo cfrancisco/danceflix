@@ -15,15 +15,38 @@ export type StepCategory =
   | 'Finalizações'
   | 'All'
 
-// ── Video sources ─────────────────────────────────────────────────────────────
+// ── Video ─────────────────────────────────────────────────────────────────────
 
-/** A single video recording — used for local/alternate sources */
-export interface VideoSource {
-  label?: string
+/** A step occurrence inside a video with optional timestamps */
+export interface VideoStepOccurrence {
+  stepId: string
+  startTime?: number
+  endTime?: number
+}
+
+/** A video entity — either a static catalog entry or a user library video. */
+export interface Video {
+  // ── Identity ───────────────────────────────────────────────────────────────
+  id: string
+  title: string
+  description?: string
+  styleId?: string
+  /** ISO date string — present on library videos, absent on catalog entries */
+  createdAt?: string
+  // ── Playback source ────────────────────────────────────────────────────────
   youtubeId?: string
   videoUrl?: string
+  /** Short display label for source-selector pills */
+  label?: string
   /** Overrides the step's default duration */
   duration?: string
+  /** Segment start in seconds — used by the player to jump to the relevant part */
+  startTimestamp?: number
+  /** Segment end in seconds — used by the player to stop at the relevant part */
+  endTimestamp?: number
+  // ── Catalog relationship (video-centric view) ──────────────────────────────
+  /** Steps that appear in this video with optional timestamps */
+  steps?: VideoStepOccurrence[]
 }
 
 // ── DanceStep ─────────────────────────────────────────────────────────────────
@@ -40,10 +63,8 @@ export interface DanceStep {
   styleId?: string
   name: string
   description: string
-  /** Primary YouTube video IDs for embed and thumbnail */
-  youtubeVideos: string[]
-  /** Local or alternate recordings with optional metadata overrides */
-  localVideos: VideoSource[]
+  /** IDs of catalog/library videos that teach this step */
+  videoIds: string[]
   /** Override thumbnail URL — defaults to the first YouTube thumbnail */
   thumbnail?: string
   duration?: string
@@ -78,6 +99,20 @@ export interface Hub {
 
 // ── Flow ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Links one occurrence of a step in a Flow sequence to a video segment.
+ * `index` matches the position in `Flow.sequence` so duplicate stepIds are unambiguous.
+ */
+export interface FlowStepTimestamp {
+  /** Position in Flow.sequence (0-based) */
+  index: number
+  stepId: string
+  /** Start of the segment, in seconds */
+  start: number
+  /** End of the segment, in seconds */
+  end: number
+}
+
 /** An ordered path through Hubs, representing a reference sequence */
 export interface Flow {
   id: string
@@ -86,9 +121,10 @@ export interface Flow {
   /** Ordered list of Hub stepIds defining the path */
   sequence: string[]
   difficulty: Level
-  videos?: VideoSource[]
-  /** Video-to-step sync: maps stepId to timestamp (seconds) in the flow video */
-  videoTimestamps?: Record<string, number>
+  /** YouTube URL (youtube.com/watch or youtu.be) or direct video URL */
+  video?: string
+  /** Per-occurrence video segments for each step in the sequence */
+  stepTimestamps?: FlowStepTimestamp[]
 }
 
 // ── DanceStyle ────────────────────────────────────────────────────────────────
@@ -112,6 +148,8 @@ export interface DanceStyle {
   accentColor?: string
   /** All steps in this style — styleId is injected by the descriptor */
   steps: DanceStep[]
+  /** Video catalog for this style */
+  videos: Video[]
   /** Hub nodes for the FlowMap graph */
   hubs: Hub[]
   /** Reference flows/sequences */

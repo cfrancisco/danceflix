@@ -1,5 +1,5 @@
 import type { DanceStep } from '../types'
-import { getVideoThumbnail } from '../data/videos'
+import { getVideoThumbnail, getEffectiveVideos } from '../data/videos'
 import './VideoPreviewTooltip.css'
 
 export interface VideoPreviewTooltipState {
@@ -18,12 +18,14 @@ interface VideoPreviewTooltipProps {
   onPin?: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
+  /** Custom hint text shown below actions when not pinned. Default: "Clique no nó para fixar" */
+  hintText?: string
 }
 
-export function VideoPreviewTooltip({ state, onClose, interactive, onPin, onMouseEnter, onMouseLeave }: VideoPreviewTooltipProps) {
+export function VideoPreviewTooltip({ state, onClose, interactive, onPin, onMouseEnter, onMouseLeave, hintText }: VideoPreviewTooltipProps) {
   const { step, screenX, screenY, pinned } = state
   const thumb = getVideoThumbnail(step)
-  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  const firstYT = getEffectiveVideos(step).find((v) => v.youtubeId)?.youtubeId
   const hasYT = !!firstYT
 
   const cardW = pinned ? 300 : 240
@@ -125,7 +127,7 @@ export function VideoPreviewTooltip({ state, onClose, interactive, onPin, onMous
             </button>
           )}
         </div>
-        {!pinned && <p className="fm-tip__hint">Clique no nó para fixar</p>}
+        {!pinned && <p className="fm-tip__hint">{hintText ?? 'Clique no nó para fixar'}</p>}
       </div>
     </div>
   )

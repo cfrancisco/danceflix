@@ -1,0 +1,51 @@
+[
+  {
+    "id": "flow-basico",
+    "name": "Ciclo Fundamental",
+    "difficulty": 1,
+    "sequence": ["base-1", "base-2", "giro-dama-simples", "base-1"],
+    "description": "Saída simples e retorno — o ciclo fundamental do Zouk"
+  },
+  {
+    "id": "flow-corporal",
+    "name": "Corporal — Onda, Cuca e Cabeça",
+    "difficulty": 3,
+    "sequence": ["base-1", "onda", "base-1", "cuca", "base-1", "chicote-com-cabeca", "base-1"],
+    "description": "Trabalho corporal completo: ondulação, isolamento de cabeça e chicote com cabeça"
+  },
+  {
+    "id": "flow-lateral-giros",
+    "name": "Lateral Exploratório",
+    "difficulty": 2,
+    "sequence": ["base-1", "base-2", "giro-cintura-bloqueio", "base-2", "giro-invertido", "base-2", "giro-dama-simples", "base-1"],
+    "description": "Encadeia variações de giros saindo da base lateral"
+  },
+  {
+    "id": "flow-volta-ao-mundo",
+    "name": "Volta ao Mundo",
+    "difficulty": 2,
+    "sequence": ["base-1", "base-2", "volta-ao-mundo", "base-2", "volta-ao-mundo-2", "base-2", "giro-dama-simples", "base-1"],
+    "description": "Sequência circulando ao redor da dama em duas variações"
+  },
+  {
+    "id": "flow-pendulos",
+    "name": "Pêndulos",
+    "difficulty": 5,
+    "sequence": ["base-1", "pendulo-1", "base-1", "base-2", "pendulo-2", "base-2", "giro-dama-simples", "base-1"],
+    "description": "Combina os dois pêndulos — saindo da base frente/trás e da base lateral"
+  },
+  {
+    "id": "flow-cambres",
+    "name": "Cambrês",
+    "difficulty": 4,
+    "sequence": ["base-1", "cambre-simples", "base-1", "onda-invertida", "base-quadril-8", "oito-ativo", "oito-passivo"],
+    "description": "Cambrê simples saindo da base, finalizando em cambrê lateral"
+  },
+  {
+    "id": "flow-mergulhos",
+    "name": "Mergulhos",
+    "difficulty": 2,
+    "sequence": ["base-1", "mergulho-girando-volta-dama", "base-1", "mergulho-bloqueio", "base-1"],
+    "description": "Dois mergulhos contrastantes — girando ao redor da dama e com bloqueio"
+  }
+]

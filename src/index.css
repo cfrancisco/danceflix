@@ -19,6 +19,30 @@
   --font-body: 'Poppins', sans-serif;
 }
 
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --c-navy:        #1a1d3b;
+  --c-navy-soft:   #2d3163;
+  --c-text:        #4a4e6b;
+  --c-text-soft:   #8b95b8;
+  --c-text-muted:  rgba(26, 29, 59, 0.45);
+  --c-amber:       #f5a623;
+  --c-amber-dark:  #c97d00;
+  --c-teal:        #00c9a7;
+  --c-purple:      #b39ddb;
+  --c-pink:        #f06292;
+  --c-border:      #dde3f5;
+  --c-border-soft: rgba(26, 29, 59, 0.12);
+  --c-bg:          #f0f4ff;
+  --c-bg-card:     #ffffff;
+  --font:          'Poppins', sans-serif;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     16px;
+  --ease:          all 0.15s ease;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
@@ -41,6 +65,11 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.app-root {
+  background: #eef2ff;
+  color: #1a1d3b;
 }
 
 .page-wrap {

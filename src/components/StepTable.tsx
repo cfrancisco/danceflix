@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useState, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { DanceStep } from '../types'
-import { getVideoThumbnail } from '../data/videos'
+import { getVideoThumbnail, getFirstYoutubeId } from '../data/videos'
+import { VideoPreviewTooltip, type VideoPreviewTooltipState } from './VideoPreviewTooltip'
 import './StepTable.css'
 
 export type StepSortCol = 'name' | 'category' | 'difficulty' | 'duration'
@@ -39,9 +42,56 @@ const COLS: { key: StepSortCol; label: string }[] = [
   { key: 'duration',   label: 'Duração'     },
 ]
 
-const P = "'Poppins', sans-serif"
 
 export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a623' }: StepTableProps) {
+  const [tooltipState, setTooltipState] = useState<VideoPreviewTooltipState | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+
+  const scheduleClose = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => {
+      setTooltipState((prev) => (prev?.pinned ? prev : null))
+    }, 300)
+  }, [])
+
+  const handleThumbMouseEnter = useCallback((step: DanceStep, e: React.MouseEvent) => {
+    cancelClose()
+    setTooltipState((prev) => {
+      if (prev?.pinned) return prev
+      return {
+        step,
+        screenX: e.clientX,
+        screenY: e.clientY,
+        pinned: false,
+      }
+    })
+  }, [cancelClose])
+
+  const handleThumbClick = useCallback((step: DanceStep, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    cancelClose()
+    setTooltipState((prev) => prev
+      ? { ...prev, pinned: true }
+      : { step, screenX: e.clientX, screenY: e.clientY, pinned: true }
+    )
+  }, [cancelClose])
+
+  const handleClose = useCallback(() => {
+    cancelClose()
+    setTooltipState(null)
+  }, [cancelClose])
+
+  const handlePin = useCallback(() => {
+    setTooltipState((prev) => prev ? { ...prev, pinned: true } : null)
+  }, [])
+
   return (
     <div className="step-table__wrap">
       <table className="step-table">
@@ -69,31 +119,38 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
         <tbody>
           {steps.map((step) => {
             const thumbnail = getVideoThumbnail(step)
-            const firstYT = step.youtubeVideos.find((id) => id !== '')
+            const firstYT = getFirstYoutubeId(step)
             const level = LEVEL_CONFIG[step.difficulty] ?? LEVEL_CONFIG[0]
             const catColor = CAT_COLOR[step.category] ?? accentColor
 
             return (
               <tr key={step.id} className="step-table__row">
-                {/* Thumbnail */}
+                {/* Thumbnail — hover abre preview, click fixa */}
                 <td className="step-table__td step-table__td--thumb">
-                  <Link to={`/video/${step.id}`} className="step-table__thumb-link">
+                  <button
+                    onMouseEnter={(e) => handleThumbMouseEnter(step, e)}
+                    onMouseLeave={scheduleClose}
+                    onClick={(e) => handleThumbClick(step, e)}
+                    className="step-table__thumb-link"
+                    type="button"
+                    title="Pré-visualizar vídeo"
+                  >
                     {firstYT ? (
                       <img src={thumbnail} alt={step.name} className="step-table__thumb" loading="lazy" />
                     ) : (
                       <div className="step-table__thumb step-table__thumb--placeholder">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#b39ddb' }}>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" className="step-table__thumb--placeholder-icon">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                             d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                       </div>
                     )}
-                  </Link>
+                  </button>
                 </td>
 
                 {/* Name */}
                 <td className="step-table__td">
-                  <Link to={`/video/${step.id}`} className="step-table__name" style={{ fontFamily: P }}>
+                  <Link to={`/video/${step.id}`} className="step-table__name">
                     {step.name}
                   </Link>
                 </td>
@@ -102,7 +159,7 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
                 <td className="step-table__td">
                   <span
                     className="step-table__cat-badge"
-                    style={{ color: catColor, borderColor: catColor, background: `${catColor}18`, fontFamily: P }}
+                    style={{ color: catColor, borderColor: catColor, background: `${catColor}18` }}
                   >
                     {step.category}
                   </span>
@@ -112,12 +169,12 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
                 <td className="step-table__td">
                   <div className="step-table__level">
                     <span className="step-table__level-dot" style={{ background: level.dot }} />
-                    <span style={{ fontFamily: P }}>{level.label}</span>
+                    <span>{level.label}</span>
                   </div>
                 </td>
 
                 {/* Duration */}
-                <td className="step-table__td step-table__td--duration" style={{ fontFamily: P }}>
+                <td className="step-table__td step-table__td--duration">
                   {step.duration ?? '—'}
                 </td>
               </tr>
@@ -125,6 +182,20 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
           })}
         </tbody>
       </table>
+
+      {/* Quick-preview tooltip — portal para o body para evitar problemas de stacking context */}
+      {tooltipState && createPortal(
+        <VideoPreviewTooltip
+          state={tooltipState}
+          onClose={handleClose}
+          interactive={true}
+          onPin={handlePin}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          hintText="Clique na thumbnail para fixar"
+        />,
+        document.body
+      )}
     </div>
   )
 }

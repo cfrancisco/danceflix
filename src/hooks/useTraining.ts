@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { TrainingProgress, Level } from '../types'
-import { getVideoById } from '../data/videos'
+import { getStepById } from '../data/videos'
 
 const STORAGE_KEY = 'danceflix:training'
 const LEGACY_KEY  = 'zouksteps:training'
@@ -53,7 +53,7 @@ export function useTraining() {
       // Default to the step's difficulty if no progress exists and no level given
       let finalLevel: Level = level ?? existing?.learningLevel ?? 0
       if (!existing && level === undefined) {
-        const step = getVideoById(stepId)
+        const step = getStepById(stepId)
         if (step) finalLevel = step.difficulty
       }
 

@@ -1,266 +1,274 @@
-import { useState } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FlowMapGraph } from '../components/FlowMapGraph'
 import { VideoPreviewTooltip, type VideoPreviewTooltipState } from '../components/VideoPreviewTooltip'
 import { useActiveStyle } from '../context/StyleContext'
+import { useCustomSteps } from '../hooks/useCustomSteps'
 import { LEVEL_LABELS } from '../types'
 import { getVideoThumbnail } from '../data/videos'
 import type { Hub, DanceStep } from '../types'
+import './FlowMap.css'
 
-const P = "'Poppins', sans-serif"
+function exportData() {
+  const data: Record<string, unknown> = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('danceflix')) {
+      try { data[key] = JSON.parse(localStorage.getItem(key)!) }
+      catch { data[key] = localStorage.getItem(key) }
+    }
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `danceflix-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function importData(file: File) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target!.result as string) as Record<string, unknown>
+      for (const [key, value] of Object.entries(data)) {
+        if (key.startsWith('danceflix')) {
+          localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
+        }
+      }
+      window.location.reload()
+    } catch { alert('Ficheiro inválido ou corrompido.') }
+  }
+  reader.readAsText(file)
+}
 
 export function FlowMap() {
   const [view, setView] = useState<'lista' | 'rede'>('rede')
   const [selectedFlow, setSelectedFlow] = useState<number>(0)
   const [expandedHub, setExpandedHub] = useState<string | null>(null)
   const [tooltip, setTooltip] = useState<VideoPreviewTooltipState | null>(null)
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
+
+  function hideTooltipDelayed() {
+    tooltipTimerRef.current = setTimeout(() => setTooltip(null), 350)
+  }
+  function cancelHideTooltip() {
+    if (tooltipTimerRef.current) { clearTimeout(tooltipTimerRef.current); tooltipTimerRef.current = null }
+  }
 
   const { activeStyle } = useActiveStyle()
-  const { hubs, flows, steps } = activeStyle
+  const { hubs, flows, steps: staticSteps } = activeStyle
+  const { customSteps, addStep: addCustomStep } = useCustomSteps(activeStyle.id)
+  const steps = useMemo(() => [...staticSteps, ...customSteps], [staticSteps, customSteps])
 
   const currentFlow = flows[selectedFlow]
   const flowHubIds = currentFlow?.sequence ?? []
 
   return (
     <div
+      className="fmap-page"
       style={{
-        background: '#f0f4ff',
-        minHeight: view === 'rede' ? undefined : '100vh',
         display: view === 'rede' ? 'flex' : 'block',
-        flexDirection: 'column',
         height: view === 'rede' ? 'calc(100vh - 120px)' : 'auto',
         overflow: view === 'rede' ? 'hidden' : 'auto',
       }}
     >
-      {/* Header — full when lista, compact toolbar when rede */}
-        <div style={{
-          background: 'rgba(240,244,255,0.94)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid #dde3f5',
-          padding: '16px 52px',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '24px',
-          zIndex: 10,
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'radial-gradient(circle, #b39ddb18 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            <span style={{ fontFamily: P, fontSize: '9px', letterSpacing: '0.45em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase' }}>
-              Estrutura
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-             <h1 style={{ fontFamily: P, fontWeight: 900, fontSize: '40px', color: '#1a1d3b', lineHeight: 0.9, letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
+      <div className="fmap-header">
+        <div className="fmap-header__dot-grid" />
+        <div className="fmap-header__label-wrap">
+          <span className="fmap-header__label">Estrutura</span>
+          <div className="fmap-header__title-row">
+            <h1 className="fmap-header__title">
               MAPA<br />
-              <span style={{ background: 'linear-gradient(90deg, #f5a623, #f06292)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                MENTAL
-              </span>
+              <span className="fmap-header__title-accent">MENTAL</span>
             </h1>
-              <span style={{ marginTop:'auto', marginBottom:'0px', fontFamily: P, fontSize: '11px', color: '#b39ddb' }}>
-                      {hubs.length} hubs · {steps.length} passos  · {flows.length} flows
-              </span>
-            </div>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <ViewToggle view={view} setView={setView} />
+            <span className="fmap-header__stats">
+              {hubs.length} hubs · {steps.length} passos · {flows.length} flows
+            </span>
           </div>
         </div>
+        <div className="fmap-header__toggle-wrap">
+          <div className="fm-io">
+            <button className="fm-io__btn" onClick={exportData} title="Exportar dados do localStorage como JSON">
+              ↓ Exportar
+            </button>
+            <button className="fm-io__btn fm-io__btn--import" onClick={() => importInputRef.current?.click()} title="Importar JSON e restaurar dados">
+              ↑ Importar
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={(e) => { if (e.target.files?.[0]) importData(e.target.files[0]) }}
+            />
+          </div>
+          <ViewToggle view={view} setView={setView} />
+        </div>
+      </div>
 
       <AnimatePresence mode="wait">
-      {/* ── REDE VIEW ── */}
-      {view === 'rede' && (
-        <motion.div
-          key="rede"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-          style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}
-        >
-          <FlowMapGraph hubs={hubs} steps={steps} flows={flows} styleId={activeStyle.id} />
-        </motion.div>
-      )}
+        {/* ── REDE VIEW ── */}
+        {view === 'rede' && (
+          <motion.div
+            key="rede"
+            className="fmap-rede"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <FlowMapGraph hubs={hubs} steps={steps} flows={flows} styleId={activeStyle.id} onAddStep={addCustomStep} />
+          </motion.div>
+        )}
 
-      {/* ── LISTA VIEW ── */}
-      {view === 'lista' && (
-        <motion.main
-          key="lista"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -24 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-          style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px 100px' }}
-        >
-
-          {/* Flow Selector */}
-          {flows.length > 0 && (
-            <div style={{ marginBottom: '40px' }}>
-              <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.35em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '16px' }}>
-                Fluxos Comuns
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
-                {flows.map((flow, index) => (
-                  <button
-                    key={flow.id}
-                    onClick={() => { setSelectedFlow(index); setExpandedHub(null) }}
-                    style={{
-                      padding: '16px', borderRadius: '14px',
-                      border: `1px solid ${selectedFlow === index ? '#f5a623' : '#dde3f5'}`,
-                      background: selectedFlow === index ? 'rgba(245,166,35,0.08)' : '#ffffff',
-                      textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                  >
-                    <p style={{ fontFamily: P, fontWeight: 700, fontSize: '14px', color: '#1a1d3b', marginBottom: '4px' }}>{flow.name}</p>
-                    <p style={{ fontFamily: P, fontSize: '12px', color: '#8b95b8' }}>{LEVEL_LABELS[flow.difficulty]}</p>
-                  </button>
-                ))}
+        {/* ── LISTA VIEW ── */}
+        {view === 'lista' && (
+          <motion.main
+            key="lista"
+            className="fmap-lista"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            {/* Flow Selector */}
+            {flows.length > 0 && (
+              <div className="fmap-flows">
+                <p className="fmap-flows__label">Fluxos Comuns</p>
+                <div className="fmap-flows__grid">
+                  {flows.map((flow, index) => (
+                    <button
+                      key={flow.id}
+                      onClick={() => { setSelectedFlow(index); setExpandedHub(null) }}
+                      className="fmap-flows__btn"
+                      style={{
+                        border: `1px solid ${selectedFlow === index ? '#f5a623' : '#dde3f5'}`,
+                        background: selectedFlow === index ? 'rgba(245,166,35,0.08)' : '#ffffff',
+                      }}
+                    >
+                      <p className="fmap-flows__btn-name">{flow.name}</p>
+                      <p className="fmap-flows__btn-level">{LEVEL_LABELS[flow.difficulty]}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Current Flow */}
-          {currentFlow && (
-            <div style={{ marginBottom: '48px', padding: '24px', background: '#f0f4ff', borderRadius: '16px', border: '1px solid #dde3f5' }}>
-              <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '22px', color: '#1a1d3b', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                {currentFlow.name}
-              </h3>
-              <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b', marginBottom: '20px', lineHeight: 1.6 }}>
-                {currentFlow.description}
-              </p>
+            {/* Current Flow */}
+            {currentFlow && (
+              <div className="fmap-current">
+                <h3 className="fmap-current__title">{currentFlow.name}</h3>
+                <p className="fmap-current__desc">{currentFlow.description}</p>
+                <div className="fmap-current__steps">
+                  {flowHubIds.map((stepId, index) => {
+                    const hub  = hubs.find((h) => h.stepId === stepId)
+                    const step = steps.find((s) => s.id === stepId)
+                    const thumb = step ? getVideoThumbnail(step) : undefined
+                    const isHub = !!hub
+                    return (
+                      <div key={`${stepId}-${index}`} className="fmap-step-btn__wrap">
+                        <button
+                          onClick={() => isHub ? setExpandedHub(expandedHub === stepId ? null : stepId) : undefined}
+                          onMouseEnter={(e) => {
+                            cancelHideTooltip()
+                            if (expandedHub !== stepId) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)'
+                            if (step && !tooltip?.pinned) {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setTooltip({ step, screenX: rect.right + 8, screenY: rect.top, pinned: false })
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (expandedHub !== stepId) e.currentTarget.style.borderColor = '#dde3f5'
+                            if (!tooltip?.pinned) hideTooltipDelayed()
+                          }}
+                          className="fmap-step-btn"
+                          style={{
+                            border: `1px solid ${expandedHub === stepId ? '#f5a623' : isHub ? '#dde3f5' : 'rgba(179,157,219,0.3)'}`,
+                            background: expandedHub === stepId ? 'rgba(245,166,35,0.08)' : '#ffffff',
+                            cursor: isHub ? 'pointer' : 'default',
+                          }}
+                        >
+                          {thumb ? (
+                            <div
+                              className="fmap-step-btn__thumb"
+                              style={{ border: `2px solid ${hub?.color ?? '#b39ddb'}` }}
+                            >
+                              <img src={thumb} alt={step?.name ?? stepId} className="fmap-step-btn__thumb-img" />
+                            </div>
+                          ) : (
+                            <span className="fmap-step-btn__icon">{hub?.icon ?? '💃'}</span>
+                          )}
+                          <p className="fmap-step-btn__name">{step?.name ?? stepId}</p>
+                          {isHub && (
+                            <span className="fmap-step-btn__dot" style={{ background: hub!.color }} />
+                          )}
+                        </button>
+                        {index < flowHubIds.length - 1 && (
+                          <svg width="20" height="12" className="fmap-step-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 8">
+                            <path d="M0 4h20m-5-3l5 3-5 3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '8px' }}>
-                {flowHubIds.map((stepId, index) => {
-                  const hub = hubs.find((h) => h.stepId === stepId)
-                  const step = steps.find((s) => s.id === stepId)
-                  const thumb = step ? getVideoThumbnail(step) : undefined
-                  const isHub = !!hub
+            {/* Expanded Hub */}
+            {expandedHub && (
+              <div className="fmap-expanded">
+                <HubDetails stepId={expandedHub} hubs={hubs} steps={steps} onClose={() => setExpandedHub(null)} />
+              </div>
+            )}
+
+            {/* All Hubs Grid */}
+            <div>
+              <p className="fmap-hubs-grid__label">Todos os Hubs</p>
+              <div className="fmap-hubs-grid__grid">
+                {hubs.map((hub) => {
+                  const step = steps.find((s) => s.id === hub.stepId)
                   return (
-                    <div key={`${stepId}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                      <button
-                        onClick={() => isHub ? setExpandedHub(expandedHub === stepId ? null : stepId) : undefined}
-                        style={{
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                          padding: '10px 14px', borderRadius: '10px', width: '100px',
-                          border: `1px solid ${expandedHub === stepId ? '#f5a623' : isHub ? '#dde3f5' : 'rgba(179,157,219,0.3)'}`,
-                          background: expandedHub === stepId ? 'rgba(245,166,35,0.08)' : '#ffffff',
-                          cursor: isHub ? 'pointer' : 'default', transition: 'all 0.15s',
-                          position: 'relative', overflow: 'hidden',
-                        }}
-                      >
-                        {thumb ? (
-                          <div style={{
-                            width: '52px', height: '52px', borderRadius: '10px', overflow: 'hidden',
-                            border: `2px solid ${hub?.color ?? '#b39ddb'}`,
-                          }}>
-                            <img src={thumb} alt={step?.name ?? stepId} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '22px' }}>{hub?.icon ?? '💃'}</span>
-                        )}
-                        <p style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#1a1d3b', textAlign: 'center', maxWidth: '80px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                          {step?.name ?? stepId}
-                        </p>
-                        {isHub && (
-                          <span style={{
-                            position: 'absolute', top: '4px', right: '4px',
-                            width: '8px', height: '8px', borderRadius: '50%',
-                            background: hub!.color, opacity: 0.7,
-                          }} />
-                        )}
-                      </button>
-                      {index < flowHubIds.length - 1 && (
-                        <svg width="20" height="12" style={{ color: '#b39ddb', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 8">
-                          <path d="M0 4h20m-5-3l5 3-5 3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
+                    <button
+                      key={hub.stepId}
+                      onClick={() => setExpandedHub(expandedHub === hub.stepId ? null : hub.stepId)}
+                      className="fmap-hubs-grid__card"
+                      style={{
+                        border: `1px solid ${expandedHub === hub.stepId ? '#f5a623' : '#dde3f5'}`,
+                        background: expandedHub === hub.stepId ? 'rgba(245,166,35,0.05)' : '#ffffff',
+                      }}
+                    >
+                      <div className="fmap-hubs-grid__card-header">
+                        <span className="fmap-hubs-grid__card-icon">{hub.icon}</span>
+                        {step && <span className="fmap-hubs-grid__card-badge">{step.difficulty}/5</span>}
+                      </div>
+                      <h3 className="fmap-hubs-grid__card-name">{step?.name ?? hub.stepId}</h3>
+                      <p className="fmap-hubs-grid__card-desc">{step?.description}</p>
+                      {hub.notes && <p className="fmap-hubs-grid__card-notes">{hub.notes}</p>}
+                    </button>
                   )
                 })}
               </div>
             </div>
-          )}
-
-          {/* Expanded Hub */}
-          {expandedHub && (
-            <div style={{ marginBottom: '40px', padding: '24px', border: '1px solid rgba(245,166,35,0.3)', borderRadius: '16px', background: 'rgba(245,166,35,0.04)' }}>
-              <HubDetails stepId={expandedHub} hubs={hubs} steps={steps} onClose={() => setExpandedHub(null)} />
-            </div>
-          )}
-
-          {/* All Hubs Grid */}
-          <div>
-            <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.35em', color: '#00c9a7', fontWeight: 700, textTransform: 'uppercase', marginBottom: '16px' }}>
-              Todos os Hubs
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-              {hubs.map((hub) => {
-                const step = steps.find((s) => s.id === hub.stepId)
-                return (
-                  <button
-                    key={hub.stepId}
-                    onClick={() => setExpandedHub(expandedHub === hub.stepId ? null : hub.stepId)}
-                    style={{
-                      textAlign: 'left', padding: '20px', borderRadius: '16px',
-                      border: `1px solid ${expandedHub === hub.stepId ? '#f5a623' : '#dde3f5'}`,
-                      background: expandedHub === hub.stepId ? 'rgba(245,166,35,0.05)' : '#ffffff',
-                      cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)'
-                      if (step && !tooltip?.pinned) {
-                        const rect = e.currentTarget.getBoundingClientRect()
-                        setTooltip({ step, screenX: rect.right + 8, screenY: rect.top, pinned: false })
-                      }
-                    }}
-                    onMouseMove={(e) => {
-                      if (!tooltip?.pinned && step) {
-                        const rect = e.currentTarget.getBoundingClientRect()
-                        setTooltip((prev) =>
-                          prev ? { ...prev, screenX: rect.right + 8, screenY: rect.top } : null
-                        )
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (expandedHub !== hub.stepId) e.currentTarget.style.borderColor = '#dde3f5'
-                      if (!tooltip?.pinned) setTooltip(null)
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '28px' }}>{hub.icon}</span>
-                      {step && (
-                        <span style={{ fontFamily: P, fontSize: '11px', fontWeight: 700, color: '#8b95b8', padding: '2px 8px', border: '1px solid #dde3f5', borderRadius: '20px' }}>
-                          {step.difficulty}/5
-                        </span>
-                      )}
-                    </div>
-                    <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '16px', color: '#1a1d3b', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                      {step?.name ?? hub.stepId}
-                    </h3>
-                    <p style={{ fontFamily: P, fontSize: '12px', color: '#4a4e6b', lineHeight: 1.5 }}>{step?.description}</p>
-                    {hub.notes && (
-                      <p style={{ fontFamily: P, fontSize: '11px', color: '#b39ddb', fontStyle: 'italic', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dde3f5' }}>
-                        {hub.notes}
-                      </p>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </motion.main>
-      )}
+          </motion.main>
+        )}
       </AnimatePresence>
 
       {tooltip && createPortal(
         <VideoPreviewTooltip
           state={tooltip}
+          interactive
           onClose={() => setTooltip(null)}
           onPin={() => setTooltip((prev) => prev ? { ...prev, pinned: true } : null)}
+          onMouseEnter={cancelHideTooltip}
+          onMouseLeave={() => { if (!tooltip.pinned) hideTooltipDelayed() }}
         />,
         document.body
       )}
@@ -276,67 +284,51 @@ interface HubDetailsProps {
 }
 
 function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
-  const hub = hubs.find((h) => h.stepId === stepId)
+  const hub  = hubs.find((h) => h.stepId === stepId)
   const step = steps.find((s) => s.id === stepId)
   if (!hub) return null
 
-  const outgoing = hub.outgoingSteps
-    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
-  const incoming = hub.incomingSteps
-    .map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
+  const outgoing = hub.outgoingSteps.map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
+  const incoming = hub.incomingSteps.map((id) => ({ hub: hubs.find((h) => h.stepId === id), step: steps.find((s) => s.id === id), id }))
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '36px' }}>{hub.icon}</span>
+      <div className="fmap-hub-detail__header">
+        <div className="fmap-hub-detail__header-left">
+          <span className="fmap-hub-detail__icon">{hub.icon}</span>
           <div>
-            <h3 style={{ fontFamily: P, fontWeight: 800, fontSize: '22px', color: '#1a1d3b', letterSpacing: '-0.01em' }}>
-              {step?.name ?? stepId}
-            </h3>
-            <p style={{ fontFamily: P, fontSize: '13px', color: '#4a4e6b' }}>{step?.description}</p>
+            <h3 className="fmap-hub-detail__title">{step?.name ?? stepId}</h3>
+            <p className="fmap-hub-detail__desc">{step?.description}</p>
           </div>
         </div>
-        <button onClick={onClose} style={{ fontFamily: P, fontSize: '14px', color: '#8b95b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
-          ✕
-        </button>
+        <button onClick={onClose} className="fmap-hub-detail__close">✕</button>
       </div>
 
       {step && (
-        <div style={{ marginBottom: '16px' }}>
-          <Link
-            to={`/video/${step.id}`}
-            style={{
-              fontFamily: P, fontSize: '12px', fontWeight: 600, color: '#1a1d3b',
-              padding: '6px 14px', borderRadius: '20px', border: '1px solid #dde3f5',
-              background: '#ffffff', textDecoration: 'none', transition: 'all 0.15s',
-              display: 'inline-block',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f5a623'; e.currentTarget.style.color = '#c97d00' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#dde3f5'; e.currentTarget.style.color = '#1a1d3b' }}
-          >
+        <div className="fmap-hub-detail__link-wrap">
+          <Link to={`/video/${step.id}`} className="fmap-hub-detail__link">
             Ver passo →
           </Link>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: outgoing.length > 0 && incoming.length > 0 ? '1fr 1fr' : '1fr', gap: '20px' }}>
+      <div
+        className="fmap-hub-detail__connections"
+        style={{ gridTemplateColumns: outgoing.length > 0 && incoming.length > 0 ? '1fr 1fr' : '1fr' }}
+      >
         {outgoing.length > 0 && (
           <div>
-            <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.25em', color: '#8b95b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '10px' }}>
-              Para onde vai daqui
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p className="fmap-hub-detail__conn-label">Para onde vai daqui</p>
+            <div className="fmap-hub-detail__conn-list">
               {outgoing.map(({ hub: h, step: s, id }) => {
                 const thumb = s ? getVideoThumbnail(s) : undefined
                 return (
-                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                    {thumb ? (
-                      <img src={thumb} alt={s?.name ?? id} style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontSize: '18px' }}>{h?.icon ?? '💃'}</span>
-                    )}
-                    <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? id}</p>
+                  <div key={id} className="fmap-hub-detail__conn-item">
+                    {thumb
+                      ? <img src={thumb} alt={s?.name ?? id} className="fmap-hub-detail__conn-thumb" />
+                      : <span className="fmap-hub-detail__conn-icon">{h?.icon ?? '💃'}</span>
+                    }
+                    <p className="fmap-hub-detail__conn-name">{s?.name ?? id}</p>
                   </div>
                 )
               })}
@@ -345,20 +337,17 @@ function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
         )}
         {incoming.length > 0 && (
           <div>
-            <p style={{ fontFamily: P, fontSize: '10px', letterSpacing: '0.25em', color: '#8b95b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '10px' }}>
-              De onde vem
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p className="fmap-hub-detail__conn-label">De onde vem</p>
+            <div className="fmap-hub-detail__conn-list">
               {incoming.map(({ hub: h, step: s, id }) => {
                 const thumb = s ? getVideoThumbnail(s) : undefined
                 return (
-                  <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', border: '1px solid #dde3f5', background: '#f0f4ff' }}>
-                    {thumb ? (
-                      <img src={thumb} alt={s?.name ?? id} style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontSize: '18px' }}>{h?.icon ?? '💃'}</span>
-                    )}
-                    <p style={{ fontFamily: P, fontSize: '13px', fontWeight: 700, color: '#1a1d3b' }}>{s?.name ?? id}</p>
+                  <div key={id} className="fmap-hub-detail__conn-item">
+                    {thumb
+                      ? <img src={thumb} alt={s?.name ?? id} className="fmap-hub-detail__conn-thumb" />
+                      : <span className="fmap-hub-detail__conn-icon">{h?.icon ?? '💃'}</span>
+                    }
+                    <p className="fmap-hub-detail__conn-name">{s?.name ?? id}</p>
                   </div>
                 )
               })}
@@ -372,19 +361,12 @@ function HubDetails({ stepId, hubs, steps, onClose }: HubDetailsProps) {
 
 function ViewToggle({ view, setView }: { view: 'lista' | 'rede'; setView: (v: 'lista' | 'rede') => void }) {
   return (
-    <div style={{ display: 'flex', gap: '6px' }}>
+    <div className="fmap-view-toggle">
       {(['lista', 'rede'] as const).map((v) => (
         <button
           key={v}
           onClick={() => setView(v)}
-          style={{
-            fontFamily: P, fontSize: '10px', letterSpacing: '0.2em', fontWeight: 700,
-            textTransform: 'uppercase', padding: '8px 20px', borderRadius: '50px',
-            border: `1px solid ${view === v ? '#f5a623' : '#dde3f5'}`,
-            background: view === v ? 'rgba(245,166,35,0.12)' : '#ffffff',
-            color: view === v ? '#f5a623' : '#4a4e6b',
-            cursor: 'pointer', transition: 'all 0.18s',
-          }}
+          className={`fmap-view-toggle__btn${view === v ? ' is-active' : ''}`}
         >
           {v === 'lista' ? '☰ Lista' : '◉ Rede'}
         </button>

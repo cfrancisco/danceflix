@@ -1,0 +1,75 @@
+[
+  {
+    "stepId": "base-1",
+    "icon": "🔄",
+    "color": "#3B82F6",
+    "notes": "Hub central — todos os fluxos começam ou retornam aqui",
+    "incomingSteps": [
+      "caminhada-frente-tras",
+      "giro-dama-simples",
+      "cambre-simples",
+      "onda-invertida",
+      "base-quadril-8",
+      "oito-ativo",
+      "oito-passivo",
+      "onda"
+    ],
+    "outgoingSteps": [
+      "caminhada-frente-tras",
+      "base-2",
+      "balanco",
+      "chicote",
+      "chicotinho",
+      "pendulo-1",
+      "onda",
+      "cuca",
+      "chicote-com-cabeca",
+      "lunge",
+      "mergulho-girando-volta-dama",
+      "mergulho-bloqueio",
+      "cambre-simples",
+      "onda-invertida",
+      "base-quadril-8",
+      "oito-ativo",
+      "oito-passivo",
+      "volta-ao-mundo-base-fechada-mergulho"
+    ]
+  },
+  {
+    "stepId": "base-2",
+    "icon": "↔️",
+    "color": "#8B5CF6",
+    "notes": "Perfeita para transições e mudanças de direção",
+    "incomingSteps": [
+      "volta-ao-mundo-base-fechada-mergulho",
+      "base-1",
+      "finalizacao-chicote",
+      "cambre-lateral"
+    ],
+    "outgoingSteps": [
+      "caminhada-em-s",
+      "abertura-2",
+      "deslize",
+      "caminhada-lateral-1",
+      "giro-dama-simples",
+      "giro-invertido",
+      "giro-cintura-bloqueio",
+      "pivo",
+      "ioio",
+      "raul",
+      "giro-12",
+      "pendulo-2",
+      "frango-assado",
+      "volta-ao-mundo",
+      "volta-ao-mundo-2"
+    ]
+  },
+  {
+    "stepId": "giro-dama-simples",
+    "icon": "🌀",
+    "color": "#EF4444",
+    "notes": "Requer boa conexão e timing",
+    "incomingSteps": ["base-2"],
+    "outgoingSteps": ["finalizacao-chicote", "bonus", "base-1", "base-2", "bloqueio"]
+  }
+]

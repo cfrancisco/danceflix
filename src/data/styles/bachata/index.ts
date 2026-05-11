@@ -1,11 +1,8 @@
-import type { DanceStyle, DanceStep } from '../../../types'
-import { bachataSteps } from './videos'
-import { bachataHubs, bachataFlows } from './flowMap'
+import type { DanceStyle, DanceStep, Hub, Flow } from '../../../types'
+import stepsData from './steps.json'
+import hubsData from './hubs.json'
+import flowsData from './flows.json'
 
-/**
- * Bachata — style descriptor.
- * Visual identity: vermelho (#DC2626) e branco.
- */
 export const BachataStyle: DanceStyle = {
   id: 'bachata',
   name: 'Bachata',
@@ -13,7 +10,8 @@ export const BachataStyle: DanceStyle = {
   icon: '🌹',
   color: '#DC2626',
   accentColor: '#DC2626',
-  steps: bachataSteps.map((s): DanceStep => ({ ...s, styleId: 'bachata' })),
-  hubs: bachataHubs,
-  flows: bachataFlows,
+  steps: (stepsData as Omit<DanceStep, 'styleId'>[]).map((s): DanceStep => ({ ...s, styleId: 'bachata' })),
+  videos: [],
+  hubs: hubsData as Hub[],
+  flows: flowsData as Flow[],
 }

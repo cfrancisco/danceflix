@@ -1,0 +1,23 @@
+[
+  {
+    "id": "flow-basico",
+    "name": "Fluxo Básico",
+    "difficulty": 1,
+    "sequence": ["bachata-base", "bachata-lateral", "bachata-base"],
+    "description": "O fluxo mais acessível para iniciantes na Bachata"
+  },
+  {
+    "id": "flow-giro",
+    "name": "Fluxo com Giro",
+    "difficulty": 2,
+    "sequence": ["bachata-base", "bachata-lateral", "bachata-giros", "bachata-base"],
+    "description": "Incorpora o primeiro giro ao fluxo básico"
+  },
+  {
+    "id": "flow-sensual",
+    "name": "Fluxo Sensual",
+    "difficulty": 3,
+    "sequence": ["bachata-base", "bachata-lateral", "bachata-sensual", "bachata-giros", "bachata-base"],
+    "description": "Combina elementos da Bachata Sensual com o fluxo clássico"
+  }
+]

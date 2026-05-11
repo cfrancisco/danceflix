@@ -78,3 +78,14 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+.rv-card:hover {
+  border-color: rgba(245, 166, 35, 0.4);
+  background: #fdfbf5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26, 29, 59, 0.1);
+}
+
+.rv-card:hover .rv-card__thumb-img {
+  transform: scale(1.05);
+}

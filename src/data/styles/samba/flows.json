@@ -1,0 +1,23 @@
+[
+  {
+    "id": "flow-basico",
+    "name": "Fluxo Básico",
+    "difficulty": 1,
+    "sequence": ["samba-ginga", "samba-no-pe", "samba-ginga"],
+    "description": "O coração do Samba — começa e termina na ginga"
+  },
+  {
+    "id": "flow-volta",
+    "name": "Fluxo com Volta",
+    "difficulty": 2,
+    "sequence": ["samba-ginga", "samba-no-pe", "samba-volta", "samba-ginga"],
+    "description": "Incorpora o icônico passo de volta"
+  },
+  {
+    "id": "flow-completo",
+    "name": "Fluxo Completo",
+    "difficulty": 4,
+    "sequence": ["samba-ginga", "samba-no-pe", "samba-volta", "samba-carreteiro", "samba-corpo", "samba-ginga"],
+    "description": "Combinação avançada com todos os elementos do Samba"
+  }
+]

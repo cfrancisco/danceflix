@@ -107,3 +107,8 @@
   display: flex;
   align-items: center;
 }
+
+.tp-actions__reset:hover {
+  border-color: #f06292;
+  color: #f06292;
+}

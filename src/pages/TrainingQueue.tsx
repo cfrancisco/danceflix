@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTraining } from '../hooks/useTraining'
+import { getFirstYoutubeId } from '../data/videos'
 import { CategoryTag } from '../components/CategoryTag'
 import { useActiveStyle } from '../context/StyleContext'
 import type { Level, StepCategory, DanceStep } from '../types'
@@ -196,14 +197,12 @@ function TrainingRow({ rank, step, timesReviewed, score, lastReviewedAt }: Train
   const lastReviewed = lastReviewedAt
     ? new Date(lastReviewedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
     : null
-  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  const firstYT = getFirstYoutubeId(step)
 
   return (
     <Link
       to={`/video/${step.id}`}
       className="tq-row group"
-      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9ff')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
     >
       {rank !== undefined && (
         <span className="tq-row__rank">

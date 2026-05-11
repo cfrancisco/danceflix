@@ -1,9 +1,34 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { getVideoById, getVideoThumbnail } from '../data/videos'
+import { getVideoById, getVideoThumbnail, getFirstYoutubeId } from '../data/videos'
 import { FlowSequenceFooter } from './FlowSequenceFooter'
-import type { Hub, DanceStep, Flow, Level } from '../types'
+import { useVideoLibrary } from '../hooks/useVideoLibrary'
+import { useActiveStyle } from '../context/StyleContext'
+import type { Hub, DanceStep, Flow, Level, Video } from '../types'
+import { LEVEL_LABELS } from '../types'
 import './FlowMapGraph.css'
+
+function parseYoutubeIdFromUrl(url: string): string | undefined {
+  const s = url.trim()
+  if (!s) return undefined
+  const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : s.length === 11 ? s : undefined
+}
+
+function videoToFlowUrl(v: Video): string {
+  if (v.youtubeId) return `https://youtube.com/watch?v=${v.youtubeId}`
+  return v.videoUrl ?? ''
+}
+
+const CLUSTER_PALETTE = [
+  { fill: 'rgba(59,130,246,0.055)',  stroke: 'rgba(59,130,246,0.22)',  label: '#3B82F6' },
+  { fill: 'rgba(16,185,129,0.055)',  stroke: 'rgba(16,185,129,0.22)',  label: '#10b981' },
+  { fill: 'rgba(245,158,11,0.055)',  stroke: 'rgba(245,158,11,0.22)',  label: '#f59e0b' },
+  { fill: 'rgba(168,85,247,0.055)',  stroke: 'rgba(168,85,247,0.22)',  label: '#a855f7' },
+  { fill: 'rgba(239,68,68,0.055)',   stroke: 'rgba(239,68,68,0.22)',   label: '#ef4444' },
+  { fill: 'rgba(20,184,166,0.055)',  stroke: 'rgba(20,184,166,0.22)',  label: '#14b8a6' },
+]
 
 const FLOW_COLOR     = '#3B82F6'
 const FLOW_COLOR_DIM = 'rgba(59,130,246,0.35)'
@@ -18,6 +43,21 @@ const EDGE_IN_DIM    = 'rgba(180,83,9,0.05)'
 
 function customFlowsKey(styleId: string) {
   return `danceflix.customFlows.${styleId}`
+}
+
+function deletedFlowsKey(styleId: string) {
+  return `danceflix.deletedFlows.${styleId}`
+}
+
+function loadDeletedFlowIds(styleId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(deletedFlowsKey(styleId))
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch { return new Set() }
+}
+
+function saveDeletedFlowIds(styleId: string, ids: Set<string>) {
+  try { localStorage.setItem(deletedFlowsKey(styleId), JSON.stringify([...ids])) } catch { /* noop */ }
 }
 
 function nodePositionsKey(styleId: string) {
@@ -46,6 +86,23 @@ function saveCustomFlows(styleId: string, flows: Flow[]) {
   try { localStorage.setItem(customFlowsKey(styleId), JSON.stringify(flows)) } catch { /* noop */ }
 }
 
+function formatTs(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function readTrainingStore(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem('danceflix:training')
+    if (!raw) return {}
+    const store = JSON.parse(raw) as Record<string, { learningLevel?: number }>
+    const result: Record<string, number> = {}
+    for (const [id, p] of Object.entries(store)) result[id] = p.learningLevel ?? 0
+    return result
+  } catch { return {} }
+}
+
 const DM = "'Poppins', sans-serif"
 
 // Precomputed hub positions for the zouk set (keyed by stepId).
@@ -56,8 +113,6 @@ const ZOUK_HUB_POSITIONS: Record<string, { x: number; y: number }> = {
   'giro-dama-simples': { x:  720, y:  200 },
 }
 
-const HUB_R = 48     // kept for force-layout repulsion radius
-const SAT_R = 22     // kept for force-layout repulsion radius
 const SAT_RING_R = 200
 
 // ── Card visual dimensions (centered at node origin) ──────────────────────
@@ -335,7 +390,7 @@ interface TooltipState {
 function VideoTooltip({ state, onClose }: { state: TooltipState; onClose: () => void }) {
   const { step, screenX, screenY, pinned } = state
   const thumb = getVideoThumbnail(step)
-  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  const firstYT = getFirstYoutubeId(step)
   const hasYT = !!firstYT
 
   const cardW = pinned ? 300 : 240
@@ -426,11 +481,14 @@ interface FlowMapGraphProps {
   steps: DanceStep[]
   flows: Flow[]
   styleId: string
+  onAddStep?: (name: string) => DanceStep
 }
 
-export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps) {
+export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMapGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [center, setCenter] = useState({ x: 560, y: 340 })
+  const lib = useVideoLibrary()
+  const { activeStyle } = useActiveStyle()
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.75 })
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null)
@@ -440,23 +498,61 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
 
   // ── Flow selection / builder state ────────────────────────────────────────
   const [customFlows, setCustomFlows] = useState<Flow[]>(() => loadCustomFlows(styleId))
+  const [deletedFlowIds, setDeletedFlowIds] = useState<Set<string>>(() => loadDeletedFlowIds(styleId))
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null)
   const [builderMode, setBuilderMode] = useState(false)
   const [draftSequence, setDraftSequence] = useState<string[]>([])
   const [draftName, setDraftName] = useState('')
   const [draftDifficulty, setDraftDifficulty] = useState<Level>(2)
+  const [draftVideo, setDraftVideo] = useState('')
+  const [editingFlowId, setEditingFlowId] = useState<string | null>(null)
+  const [showVideoPicker, setShowVideoPicker] = useState(false)
+  const [videoSearch, setVideoSearch] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarView, setSidebarView] = useState<'list' | 'detail' | 'edit'>('list')
+  const [sidebarDir, setSidebarDir] = useState<1 | -1>(1)
 
+  // Footer edit mode wiring
+  const footerAddStep = useRef<((id: string) => void) | null>(null)
+  const [footerEditing, setFooterEditing] = useState(false)
+  const [legendVisible, setLegendVisible] = useState(true)
   useEffect(() => {
     setCustomFlows(loadCustomFlows(styleId))
+    setDeletedFlowIds(loadDeletedFlowIds(styleId))
     setSelectedFlowId(null)
     setBuilderMode(false)
     setDraftSequence([])
     setDraftName('')
+    setDraftVideo('')
+    setFooterEditing(false)
+    footerAddStep.current = null
   }, [styleId])
 
-  const allFlows: Flow[] = useMemo(() => [...flows, ...customFlows], [flows, customFlows])
+  const allFlows: Flow[] = useMemo(() => {
+    const customIds = new Set(customFlows.map((f) => f.id))
+    return [
+      ...flows.filter((f) => !customIds.has(f.id) && !deletedFlowIds.has(f.id)),
+      ...customFlows.filter((f) => !deletedFlowIds.has(f.id)),
+    ]
+  }, [flows, customFlows, deletedFlowIds])
   const selectedFlow = selectedFlowId ? allFlows.find((f) => f.id === selectedFlowId) ?? null : null
+
+  const allPickerVideos = useMemo<Video[]>(() => {
+    const catalog = activeStyle.videos
+    const seen = new Set(catalog.map((v) => v.id))
+    return [...catalog, ...lib.videos.filter((v) => !seen.has(v.id))]
+  }, [activeStyle.videos, lib.videos])
+
+  const filteredPickerVideos = useMemo(() => {
+    const q = videoSearch.trim().toLowerCase()
+    if (!q) return allPickerVideos
+    return allPickerVideos.filter((v) => v.title.toLowerCase().includes(q))
+  }, [allPickerVideos, videoSearch])
+
+  const draftVideoThumb = useMemo(() => {
+    const ytId = parseYoutubeIdFromUrl(draftVideo)
+    return ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : undefined
+  }, [draftVideo])
 
   // The "active" sequence drives highlighting — either the selected flow or the draft being built
   const activeSequence: string[] = builderMode ? draftSequence : (selectedFlow?.sequence ?? [])
@@ -470,15 +566,6 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
       map[id].push(i + 1)
     })
     return map
-  }, [activeSequence])
-
-  // Edges that are part of the active flow path (consecutive pairs)
-  const flowEdgeSet = useMemo(() => {
-    const s = new Set<string>()
-    for (let i = 0; i < activeSequence.length - 1; i++) {
-      s.add(`${activeSequence[i]}->${activeSequence[i + 1]}`)
-    }
-    return s
   }, [activeSequence])
 
   const getStep = useCallback((stepId: string) => steps.find((s) => s.id === stepId), [steps])
@@ -582,60 +669,8 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
     return map
   }, [steps, nodeIds])
 
-  // For each node, which categories is it directly connected to ALL graph-members of?
-  const categoryMasters = useMemo(() => {
-    const masters: Record<string, string[]> = {}
-    const neighborSets: Record<string, Set<string>> = {}
-    nodeIds.forEach((id) => { neighborSets[id] = new Set() })
-    connections.forEach((c) => {
-      if (neighborSets[c.from]) neighborSets[c.from].add(c.to)
-      if (neighborSets[c.to])   neighborSets[c.to].add(c.from)
-    })
-    nodeIds.forEach((stepId) => {
-      const neighbors = neighborSets[stepId] ?? new Set<string>()
-      const mastered: string[] = []
-      Object.entries(stepsByCategory).forEach(([cat, catIds]) => {
-        if (catIds.length < 2) return // require at least 2 members to be meaningful
-        const allConnected = catIds.every((id) => id === stepId || neighbors.has(id))
-        if (allConnected) mastered.push(cat)
-      })
-      if (mastered.length > 0) masters[stepId] = mastered
-    })
-    return masters
-  }, [stepsByCategory, connections, nodeIds])
 
-  // Bounding-box cluster rectangles for each category (drawn behind nodes)
-  const CLUSTER_PALETTE = [
-    { fill: 'rgba(59,130,246,0.055)',  stroke: 'rgba(59,130,246,0.22)',  label: '#3B82F6' },
-    { fill: 'rgba(16,185,129,0.055)',  stroke: 'rgba(16,185,129,0.22)',  label: '#10b981' },
-    { fill: 'rgba(245,158,11,0.055)',  stroke: 'rgba(245,158,11,0.22)',  label: '#f59e0b' },
-    { fill: 'rgba(168,85,247,0.055)',  stroke: 'rgba(168,85,247,0.22)',  label: '#a855f7' },
-    { fill: 'rgba(239,68,68,0.055)',   stroke: 'rgba(239,68,68,0.22)',   label: '#ef4444' },
-    { fill: 'rgba(20,184,166,0.055)',  stroke: 'rgba(20,184,166,0.22)',  label: '#14b8a6' },
-  ]
 
-  const categoryClusters = useMemo(() => {
-    return Object.entries(stepsByCategory)
-      .filter(([_, ids]) => ids.length >= 2)
-      .map(([cat, ids], idx) => {
-        const pts = ids.map((id) => positions[id]).filter(Boolean) as { x: number; y: number }[]
-        if (pts.length < 2) return null
-        const pad = 38
-        const minX = Math.min(...pts.map((p) => p.x))
-        const maxX = Math.max(...pts.map((p) => p.x))
-        const minY = Math.min(...pts.map((p) => p.y))
-        const maxY = Math.max(...pts.map((p) => p.y))
-        return {
-          cat,
-          ...CLUSTER_PALETTE[idx % CLUSTER_PALETTE.length],
-          x: minX - SAT_W / 2 - pad,
-          y: minY - SAT_H / 2 - pad,
-          w: maxX - minX + SAT_W + pad * 2,
-          h: maxY - minY + SAT_H + pad * 2,
-        }
-      })
-      .filter((c): c is NonNullable<typeof c> => c !== null)
-  }, [stepsByCategory, positions])
 
   // ── Per-edge port positions (fixed right-exit / left-enter, y-distributed) ─
   const portAssignments = useMemo(() => {
@@ -679,6 +714,11 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
       }
     })
   }, [connections, positions, hubIds])
+
+  // All non-hub satellites are always visible as individual nodes
+  const visibleSatIds = useMemo(() => {
+    return new Set(nodeIds.filter((id) => !hubIds.has(id)))
+  }, [nodeIds, hubIds])
 
   const handleNodeDragStart = useCallback((stepId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -798,25 +838,36 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
 
   // ── Flow selector / builder handlers ──────────────────────────────────────
   const handleSelectFlow = useCallback((flowId: string | null) => {
+    setSidebarDir(flowId ? 1 : -1)
     setSelectedFlowId(flowId)
     setSelectedStepId(null)
     setTooltip(null)
+    setSidebarView(flowId ? 'detail' : 'list')
   }, [])
 
   const enterBuilder = useCallback(() => {
+    setSidebarDir(1)
     setBuilderMode(true)
     setSelectedFlowId(null)
     setSelectedStepId(null)
     setTooltip(null)
+    setSidebarView('list')
     setDraftSequence([])
     setDraftName('')
     setDraftDifficulty(2)
+    setDraftVideo('')
+    setEditingFlowId(null)
   }, [])
 
   const exitBuilder = useCallback(() => {
+    setSidebarDir(-1)
     setBuilderMode(false)
     setDraftSequence([])
     setDraftName('')
+    setDraftVideo('')
+    setEditingFlowId(null)
+    setShowVideoPicker(false)
+    setVideoSearch('')
   }, [])
 
   const addToDraft = useCallback((stepId: string) => {
@@ -828,29 +879,52 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
   }, [])
 
   const saveDraft = useCallback(() => {
-    if (draftSequence.length < 2 || !draftName.trim()) return
-    const newFlow: Flow = {
-      id: `custom-${Date.now()}`,
-      name: draftName.trim(),
-      description: 'Flow personalizado',
-      difficulty: draftDifficulty,
-      sequence: [...draftSequence],
+    if (!draftName.trim()) return
+    let next: Flow[]
+    let savedId: string
+    if (editingFlowId) {
+      savedId = editingFlowId
+      next = customFlows.map((f) =>
+        f.id === editingFlowId
+          ? { ...f, name: draftName.trim(), difficulty: draftDifficulty, sequence: [...draftSequence], video: draftVideo.trim() || undefined }
+          : f
+      )
+    } else {
+      const newFlow: Flow = {
+        id: `custom-${Date.now()}`,
+        name: draftName.trim(),
+        description: 'Flow personalizado',
+        difficulty: draftDifficulty,
+        sequence: [...draftSequence],
+        video: draftVideo.trim() || undefined,
+      }
+      savedId = newFlow.id
+      next = [...customFlows, newFlow]
     }
-    const next = [...customFlows, newFlow]
     setCustomFlows(next)
     saveCustomFlows(styleId, next)
+    setSelectedFlowId(savedId)
     setBuilderMode(false)
     setDraftSequence([])
     setDraftName('')
-    setSelectedFlowId(newFlow.id)
-  }, [draftSequence, draftName, draftDifficulty, customFlows, styleId])
+    setDraftVideo('')
+    setEditingFlowId(null)
+    setShowVideoPicker(false)
+    setVideoSearch('')
+  }, [draftSequence, draftName, draftDifficulty, draftVideo, editingFlowId, customFlows, styleId])
 
-  const deleteCustomFlow = useCallback((flowId: string) => {
-    const next = customFlows.filter((f) => f.id !== flowId)
-    setCustomFlows(next)
-    saveCustomFlows(styleId, next)
+  const deleteFlow = useCallback((flowId: string) => {
+    if (customFlows.some((f) => f.id === flowId)) {
+      const next = customFlows.filter((f) => f.id !== flowId)
+      setCustomFlows(next)
+      saveCustomFlows(styleId, next)
+    } else {
+      const next = new Set([...deletedFlowIds, flowId])
+      setDeletedFlowIds(next)
+      saveDeletedFlowIds(styleId, next)
+    }
     if (selectedFlowId === flowId) setSelectedFlowId(null)
-  }, [customFlows, styleId, selectedFlowId])
+  }, [customFlows, deletedFlowIds, styleId, selectedFlowId])
 
   // Click on a node — different behavior based on mode
   const handleNodeClick = useCallback((stepId: string, e: React.MouseEvent) => {
@@ -858,9 +932,15 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
       addToDraft(stepId)
       return
     }
+    if (footerEditing && footerAddStep.current) {
+      footerAddStep.current(stepId)
+      return
+    }
     setSelectedStepId((prev) => (prev === stepId ? null : stepId))
     pinTooltip(stepId, e)
-  }, [builderMode, addToDraft, pinTooltip])
+  }, [builderMode, footerEditing, addToDraft, pinTooltip])
+
+  const sidebarWidth = !builderMode && sidebarView === 'edit' ? 572 : 260
 
   return (
     <div ref={containerRef} className="fm-graph" style={{ display: 'flex', height: '100%' }}>
@@ -870,7 +950,7 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
         style={{
           position: 'absolute',
           top: '16px',
-          left: sidebarOpen ? '276px' : '16px',
+          left: sidebarOpen ? `${sidebarWidth + 16}px` : '16px',
           width: '32px',
           height: '32px',
           background: 'rgba(255,255,255,0.95)',
@@ -891,123 +971,303 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
         {sidebarOpen ? '←' : '→'}
       </button>
 
-      {/* ─ Left sidebar: filter panel (flows + categories) ── */}
-      {sidebarOpen && <div className="fm-sidebar">
-        {!builderMode ? (
-          <div className="fm-sidebar__section">
-            <span className="fm-sidebar__label">Flows</span>
-            <button
-              onClick={() => handleSelectFlow(null)}
-              className={`fm-pill fm-pill--neutral ${selectedFlowId === null ? 'is-active' : ''}`}
-            >
-              Nenhum
-            </button>
-            {allFlows.map((flow) => {
-              const isCustom = flow.id.startsWith('custom-')
-              const isActive = selectedFlowId === flow.id
-              return (
-                <div key={flow.id} className={`fm-pill__custom-wrap ${isActive ? 'is-active' : ''}`}>
-                  <button
-                    onClick={() => handleSelectFlow(flow.id)}
-                    title={flow.description}
-                    className={`fm-pill fm-pill--flow ${isCustom ? 'fm-pill--custom' : ''} ${isActive ? 'is-active' : ''}`}
-                  >
-                    {isCustom && '★ '}{flow.name}
-                  </button>
-                  {isCustom && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteCustomFlow(flow.id) }}
-                      title="Apagar flow personalizado"
-                      className="fm-pill__delete"
-                    >×</button>
-                  )}
-                </div>
-              )
-            })}
-            <button onClick={enterBuilder} className="fm-pill fm-pill--builder">
-              + Criar flow
-            </button>
-          </div>
-        ) : (
-          <div className="fm-builder fm-builder--sidebar">
-            <div className="fm-builder__header">
-              <div className="fm-builder__controls">
-                <span className="fm-builder__label">Construindo flow</span>
-                <input
-                  type="text"
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  placeholder="Nome do flow…"
-                  className="fm-builder__input"
-                />
-                <select
-                  value={draftDifficulty}
-                  onChange={(e) => setDraftDifficulty(Number(e.target.value) as Level)}
-                  className="fm-builder__select"
-                >
-                  {[1, 2, 3, 4, 5].map((lvl) => (
-                    <option key={lvl} value={lvl}>Dificuldade {lvl}/5</option>
-                  ))}
-                </select>
-              </div>
-              <div className="fm-builder__actions">
-                <button onClick={exitBuilder} className="fm-btn fm-btn--ghost">Cancelar</button>
-                <button
-                  onClick={saveDraft}
-                  disabled={draftSequence.length < 2 || !draftName.trim()}
-                  className="fm-btn fm-btn--primary"
-                >Salvar</button>
-              </div>
-            </div>
-            <div className="fm-builder__sequence">
-              <span className="fm-builder__sequence-hint">
-                {draftSequence.length === 0 ? 'Clique nos nós para montar a sequência' : `${draftSequence.length} passos`}
-              </span>
-              {draftSequence.map((stepId, i) => {
-                const s = getStep(stepId)
-                const isHub = hubIds.has(stepId)
-                return (
-                  <div key={i} className="fm-builder__chip-group">
-                    {i > 0 && <span className="fm-builder__arrow">→</span>}
-                    <button
-                      onClick={() => removeFromDraftAt(i)}
-                      title="Remover deste flow"
-                      className={`fm-builder__chip ${isHub ? 'fm-builder__chip--hub' : ''}`}
-                    >
-                      {i + 1}. {s?.name ?? stepId} ×
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+      {/* ─ Left sidebar ── */}
+      {sidebarOpen && (
+        <div className="fm-sidebar" style={{ width: sidebarWidth, transition: 'width 0.18s ease' }}>
+          <AnimatePresence initial={false} mode="wait" custom={sidebarDir}>
 
-        {/* Category filter section — always visible */}
-        {categories.length > 0 && (
-          <div className="fm-sidebar__section">
-            <span className="fm-sidebar__label">Categoria</span>
-            <button
-              onClick={() => setCategoryFilter(null)}
-              className={`fm-pill fm-pill--neutral ${categoryFilter === null ? 'is-active' : ''}`}
-            >
-              Todas
-            </button>
-            {categories.map((cat) => {
-              const isActive = categoryFilter === cat
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(isActive ? null : cat)}
-                  className={`fm-pill fm-pill--category ${isActive ? 'is-active' : ''}`}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>}
+            {/* ── LIST page ── */}
+            {!builderMode && sidebarView === 'list' && (
+              <motion.div key="list" className="fm-sidebar__page"
+                custom={sidebarDir}
+                variants={{ enter: (d) => ({ x: d * 28, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d * -28, opacity: 0 }) }}
+                initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+              >
+                <div className="fm-sidebar__section">
+                  <span className="fm-sidebar__label">Visualização</span>
+                  <button
+                    onClick={() => { saveNodePositions(styleId, {}); setUserPositions({}) }}
+                    className="fm-pill fm-pill--neutral"
+                  >
+                    Limpar posições
+                  </button>
+                </div>
+
+                <div className="fm-sidebar__section">
+                  <span className="fm-sidebar__label">Flows</span>
+                  <button onClick={enterBuilder} className="fm-pill fm-pill--builder">
+                    + Criar flow
+                  </button>
+                  {allFlows.map((flow) => {
+                    const isActive = selectedFlowId === flow.id
+                    return (
+                      <button
+                        key={flow.id}
+                        onClick={() => handleSelectFlow(flow.id)}
+                        title={flow.description}
+                        className={`fm-pill fm-pill--flow ${isActive ? 'is-active' : ''}`}
+                      >
+                        {flow.name}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {categories.length > 0 && (
+                  <div className="fm-sidebar__section">
+                    <span className="fm-sidebar__label">Categoria</span>
+                    <button
+                      onClick={() => setCategoryFilter(null)}
+                      className={`fm-pill fm-pill--neutral ${categoryFilter === null ? 'is-active' : ''}`}
+                    >
+                      Todas
+                    </button>
+                    {categories.map((cat) => {
+                      const isActive = categoryFilter === cat
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setCategoryFilter(isActive ? null : cat)}
+                          className={`fm-pill fm-pill--category ${isActive ? 'is-active' : ''}`}
+                        >
+                          {cat}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* ── BUILDER page ── */}
+            {builderMode && (
+              <motion.div key="builder" className="fm-sidebar__page"
+                custom={sidebarDir}
+                variants={{ enter: (d) => ({ x: d * 28, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d * -28, opacity: 0 }) }}
+                initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+              >
+                <div className="fm-builder fm-builder--sidebar">
+                  <div className="fm-builder__header">
+                    <div className="fm-builder__controls">
+                      <span className="fm-builder__label">Construindo flow</span>
+                      <input
+                        type="text"
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        placeholder="Nome do flow…"
+                        className="fm-builder__input"
+                      />
+                      <select
+                        value={draftDifficulty}
+                        onChange={(e) => setDraftDifficulty(Number(e.target.value) as Level)}
+                        className="fm-builder__select"
+                      >
+                        {[1, 2, 3, 4, 5].map((lvl) => (
+                          <option key={lvl} value={lvl}>Dificuldade {lvl}/5</option>
+                        ))}
+                      </select>
+                      <div className="fm-builder__video-section">
+                        <div className="fm-builder__video-row">
+                          <input
+                            type="text"
+                            value={draftVideo}
+                            onChange={(e) => { setDraftVideo(e.target.value); setShowVideoPicker(false) }}
+                            placeholder="URL do vídeo (YouTube ou local)…"
+                            className="fm-builder__input fm-builder__input--video"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowVideoPicker((v) => !v)}
+                            className={`fm-builder__video-search-btn${showVideoPicker ? ' is-active' : ''}`}
+                            title="Buscar vídeos cadastrados"
+                          >
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                            </svg>
+                          </button>
+                        </div>
+                        {draftVideoThumb && !showVideoPicker && (
+                          <img src={draftVideoThumb} alt="preview" className="fm-builder__video-thumb" />
+                        )}
+                        {showVideoPicker && (
+                          <div className="fm-builder__video-picker">
+                            <input
+                              value={videoSearch}
+                              onChange={(e) => setVideoSearch(e.target.value)}
+                              placeholder="Buscar vídeo…"
+                              className="fm-builder__input fm-builder__picker-search"
+                              autoFocus
+                            />
+                            <div className="fm-builder__video-list">
+                              {filteredPickerVideos.length === 0 ? (
+                                <p className="fm-builder__video-empty">Nenhum vídeo encontrado</p>
+                              ) : filteredPickerVideos.map((v) => (
+                                <button
+                                  key={v.id}
+                                  className="fm-builder__video-item"
+                                  onClick={() => { setDraftVideo(videoToFlowUrl(v)); setShowVideoPicker(false); setVideoSearch('') }}
+                                >
+                                  {v.youtubeId && (
+                                    <img src={`https://img.youtube.com/vi/${v.youtubeId}/default.jpg`} alt="" className="fm-builder__video-item-thumb" />
+                                  )}
+                                  <span className="fm-builder__video-item-title">{v.title}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="fm-builder__actions">
+                      <button onClick={exitBuilder} className="fm-btn fm-btn--ghost">Cancelar</button>
+                      <button onClick={saveDraft} disabled={!draftName.trim()} className="fm-btn fm-btn--primary">Salvar</button>
+                    </div>
+                  </div>
+                  {(() => {
+                    const trainingStore = readTrainingStore()
+                    const avgDifficulty = draftSequence.length > 0
+                      ? draftSequence.reduce((acc, id) => acc + (getStep(id)?.difficulty ?? 0), 0) / draftSequence.length : 0
+                    const nonHubRecall = draftSequence.filter((id) => !hubIds.has(id)).map((id) => trainingStore[id] ?? 0)
+                    const avgRecall = nonHubRecall.length > 0 ? nonHubRecall.reduce((a, b) => a + b, 0) / nonHubRecall.length : 0
+                    return draftSequence.length > 0 ? (
+                      <div className="fm-builder__stats">
+                        <span className="fm-builder__stat">{draftSequence.length} {draftSequence.length === 1 ? 'passo' : 'passos'}</span>
+                        <span className="fm-builder__stat fm-builder__stat--difficulty">★ {avgDifficulty.toFixed(1)} dif.</span>
+                        {nonHubRecall.length > 0 && <span className="fm-builder__stat fm-builder__stat--recall">◎ {avgRecall.toFixed(1)} rec.</span>}
+                      </div>
+                    ) : null
+                  })()}
+                  <div className="fm-builder__sequence">
+                    <span className="fm-builder__sequence-hint">
+                      {draftSequence.length === 0 ? 'Clique nos nós para montar a sequência' : ''}
+                    </span>
+                    {draftSequence.map((stepId, i) => {
+                      const s = getStep(stepId)
+                      const isHub = hubIds.has(stepId)
+                      return (
+                        <div key={i} className="fm-builder__chip-group">
+                          {i > 0 && <span className="fm-builder__arrow">→</span>}
+                          <button
+                            onClick={() => removeFromDraftAt(i)}
+                            title="Remover deste flow"
+                            className={`fm-builder__chip ${isHub ? 'fm-builder__chip--hub' : ''}`}
+                          >
+                            {i + 1}. {s?.name ?? stepId} ×
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── DETAIL page ── */}
+            {!builderMode && sidebarView === 'detail' && selectedFlow && (
+              <motion.div key="detail" className="fm-sidebar__page"
+                custom={sidebarDir}
+                variants={{ enter: (d) => ({ x: d * 28, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d * -28, opacity: 0 }) }}
+                initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+              >
+                <div className="fm-flow-detail">
+                  <button
+                    className="fm-flow-detail__back"
+                    onClick={() => { setSidebarDir(-1); setSelectedFlowId(null); setSidebarView('list') }}
+                  >
+                    ← Voltar
+                  </button>
+                  <div className="fm-flow-detail__header">
+                    <h3 className="fm-flow-detail__title">{selectedFlow.name}</h3>
+                    <span className="fm-flow-detail__level">{LEVEL_LABELS[selectedFlow.difficulty]}</span>
+                  </div>
+                  {selectedFlow.description && (
+                    <p className="fm-flow-detail__desc">{selectedFlow.description}</p>
+                  )}
+                  <div className="fm-flow-detail__steps">
+                    {selectedFlow.sequence.length === 0 ? (
+                      <p className="fm-flow-detail__empty">Nenhum passo</p>
+                    ) : selectedFlow.sequence.map((stepId, i) => {
+                      const step = steps.find((s) => s.id === stepId)
+                      const ts   = selectedFlow.stepTimestamps?.find((t) => t.index === i)
+                      return (
+                        <button
+                          key={i}
+                          className="fm-flow-detail__step"
+                          onClick={() => {
+                            setSelectedStepId(stepId)
+                            const pos = positions[stepId]
+                            if (pos) setTransform((t) => ({ ...t, x: -pos.x * t.scale, y: -pos.y * t.scale }))
+                          }}
+                        >
+                          <span className="fm-flow-detail__step-num">{i + 1}</span>
+                          <span className="fm-flow-detail__step-name">{step?.name ?? stepId}</span>
+                          {ts && <span className="fm-flow-detail__step-ts">{formatTs(ts.start)}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="fm-flow-detail__actions">
+                      <button
+                        className="fm-btn fm-btn--primary"
+                        onClick={() => { setSidebarDir(1); setSidebarView('edit') }}
+                      >
+                        ✎ Editar
+                      </button>
+                      <button
+                        className="fm-btn fm-btn--danger"
+                        onClick={() => { setSidebarDir(-1); deleteFlow(selectedFlow.id); setSidebarView('list') }}
+                      >
+                        Apagar
+                      </button>
+                    </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── EDIT page ── */}
+            {!builderMode && sidebarView === 'edit' && selectedFlow && (
+              <motion.div key="edit" className="fm-sidebar__page"
+                custom={sidebarDir}
+                variants={{ enter: (d) => ({ x: d * 28, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d * -28, opacity: 0 }) }}
+                initial="enter" animate="center" exit="exit"
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+              >
+                <FlowSequenceFooter
+                  sidebar
+                  flow={selectedFlow}
+                  steps={steps}
+                  hubs={hubs}
+                  onStepClick={(stepId) => {
+                    setSelectedStepId(stepId)
+                    const pos = positions[stepId]
+                    if (pos) setTransform((t) => ({ ...t, x: -pos.x * t.scale, y: -pos.y * t.scale }))
+                  }}
+                  onClose={() => { setSidebarDir(-1); setSidebarView('detail') }}
+                  onUpdateFlow={(updated) => {
+                    const next = customFlows.some((f) => f.id === updated.id)
+                      ? customFlows.map((f) => f.id === updated.id ? updated : f)
+                      : [...customFlows, updated]
+                    setCustomFlows(next)
+                    saveCustomFlows(styleId, next)
+                    setSelectedFlowId(updated.id)
+                    setSidebarDir(-1)
+                    setSidebarView('detail')
+                  }}
+                  onEditModeChange={(active, addFn) => {
+                    footerAddStep.current = active ? addFn : null
+                    setFooterEditing(active)
+                  }}
+                  onAddStep={onAddStep}
+                />
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* ─ Main graph area ── */}
       <div style={{ flex: 1, position: 'relative' }}>
@@ -1040,26 +1300,28 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(26,29,59,0.07)" strokeWidth="0.5" />
           </pattern>
 
-          {/* Arrow markers — outgoing (purple) / incoming (brown) / flow (blue) */}
-          <marker id="arrow-out" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
-            <polygon points="0,1.5 10,5 0,8.5" fill={EDGE_OUT_IDLE} />
+          {/* Arrow markers — outgoing (purple) / incoming (brown) / flow (blue)
+              markerUnits=userSpaceOnUse → dimensions are in world-coordinate units.
+              Idle markers: 22×18 · Highlighted: 28×22 · Flow: 24×20              */}
+          <marker id="arrow-out" viewBox="0 0 12 12" refX="12" refY="6"
+            markerWidth="22" markerHeight="18" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="1,2.5 12,6 1,9.5" fill={EDGE_OUT_IDLE} />
           </marker>
-          <marker id="arrow-out-hl" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
-            <polygon points="0,1.5 10,5 0,8.5" fill={EDGE_OUT} />
+          <marker id="arrow-out-hl" viewBox="0 0 12 12" refX="12" refY="6"
+            markerWidth="28" markerHeight="22" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="1,2.5 12,6 1,9.5" fill={EDGE_OUT} />
           </marker>
-          <marker id="arrow-in" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
-            <polygon points="0,1.5 10,5 0,8.5" fill={EDGE_IN_IDLE} />
+          <marker id="arrow-in" viewBox="0 0 12 12" refX="12" refY="6"
+            markerWidth="22" markerHeight="18" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="1,2.5 12,6 1,9.5" fill={EDGE_IN_IDLE} />
           </marker>
-          <marker id="arrow-in-hl" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
-            <polygon points="0,1.5 10,5 0,8.5" fill={EDGE_IN} />
+          <marker id="arrow-in-hl" viewBox="0 0 12 12" refX="12" refY="6"
+            markerWidth="28" markerHeight="22" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="1,2.5 12,6 1,9.5" fill={EDGE_IN} />
           </marker>
-          <marker id="arrow-flow" viewBox="0 0 10 10" refX="9" refY="5"
-            markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
-            <polygon points="0,1.5 10,5 0,8.5" fill={FLOW_COLOR} />
+          <marker id="arrow-flow" viewBox="0 0 12 12" refX="12" refY="6"
+            markerWidth="24" markerHeight="20" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="1,2.5 12,6 1,9.5" fill={FLOW_COLOR} />
           </marker>
 
           {/* Thumbnail clip paths — use userSpaceOnUse so coords are in each node's local space */}
@@ -1137,8 +1399,54 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
             )
           })}
 
+          {/* Flow start indicator — bouncing chevrons above step 1 */}
+          {activeSequence.length > 0 && (() => {
+            const firstId  = activeSequence[0]
+            const firstPos = positions[firstId]
+            if (!firstPos) return null
+            const isHub  = hubIds.has(firstId)
+            const halfH  = (isHub ? HUB_H : SAT_H) / 2
+            const ax     = firstPos.x
+            const ay     = firstPos.y - halfH - 52   // above the node
+
+            return (
+              <g key="flow-start-indicator" style={{ pointerEvents: 'none' }}>
+                {/* Dashed connector line (static) */}
+                <line
+                  x1={ax} y1={ay + 28} x2={ax} y2={firstPos.y - halfH - 4}
+                  stroke={FLOW_COLOR} strokeWidth={1.5}
+                  strokeDasharray="5 4" opacity={0.35}
+                />
+                {/* Bouncing double-chevron + label */}
+                <g>
+                  <animateTransform
+                    attributeName="transform" type="translate"
+                    values="0,0; 0,9; 0,0" dur="0.85s" repeatCount="indefinite"
+                  />
+                  {/* "INÍCIO" label */}
+                  <text x={ax} y={ay - 8}
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize="9" fontWeight={800} fill={FLOW_COLOR}
+                    letterSpacing="0.22em"
+                    style={{ userSelect: 'none', fontFamily: DM }}
+                  >INÍCIO</text>
+                  {/* Top chevron */}
+                  <polygon
+                    points={`${ax - 12},${ay + 2} ${ax + 12},${ay + 2} ${ax},${ay + 14}`}
+                    fill={FLOW_COLOR} opacity={0.9}
+                  />
+                  {/* Bottom chevron (slightly larger, faded) */}
+                  <polygon
+                    points={`${ax - 9},${ay + 14} ${ax + 9},${ay + 14} ${ax},${ay + 26}`}
+                    fill={FLOW_COLOR} opacity={0.45}
+                  />
+                </g>
+              </g>
+            )
+          })()}
+
           {/* Satellite step nodes — render before hubs so hubs sit on top */}
-          {nodeIds.filter((id) => !hubIds.has(id)).map((stepId) => {
+          {nodeIds.filter((id) => !hubIds.has(id) && visibleSatIds.has(id)).map((stepId) => {
             const pos        = positions[stepId] ?? { x: 0, y: 0 }
             const step       = getStep(stepId)
             const label      = step?.name ?? stepId
@@ -1188,6 +1496,8 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
                 onMouseLeave={hideTooltip}
                 style={{ cursor: draggingNode === stepId ? 'grabbing' : 'grab' }}
               >
+              {/* Inner wrapper gets the appear animation so the outer translate is not clobbered */}
+              <g className="fm-sat-appear">
                 {/* Card background */}
                 <rect x={-sw2} y={-sh2} width={SAT_W} height={SAT_H} rx={8}
                   fill={isSelected ? '#fffbf0' : '#ffffff'}
@@ -1240,15 +1550,15 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
                   ))}
                 </g>
 
-                {/* Flow position badge */}
-                {flowPositions && flowPositions.length > 0 && (
-                  <g transform={`translate(${sw2 - 10}, ${-sh2 + 10})`}>
-                    <circle r={10} fill={FLOW_COLOR} stroke="#fff" strokeWidth={1.5} />
-                    <text textAnchor="middle" dominantBaseline="central" fontSize="9" fontWeight={700} fill="#fff" style={{ userSelect: 'none', pointerEvents: 'none', fontFamily: DM }}>
-                      {flowPositions.join(',')}
+                {/* Flow position badges — one circle per occurrence */}
+                {flowPositions && flowPositions.map((pos, i) => (
+                  <g key={i} transform={`translate(${sw2 - 9 - i * 19}, ${-sh2 + 9})`}>
+                    <circle r={9} fill={FLOW_COLOR} stroke="#fff" strokeWidth={1.5} />
+                    <text textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight={700} fill="#fff" style={{ userSelect: 'none', pointerEvents: 'none', fontFamily: DM }}>
+                      {pos}
                     </text>
                   </g>
-                )}
+                ))}
                 {/* Category affinity badge */}
                 {categoryFilter && affinity > 0 && !flowPositions && (
                   <g transform={`translate(${sw2 - 14}, ${sh2 - 11})`}>
@@ -1284,6 +1594,7 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
                 {/* Port dots */}
                 <circle cx={-sw2} cy={0} r={5} fill="#fff" stroke={accentColor} strokeWidth={1.5} opacity={isDimmed ? 0.15 : 0.7} />
                 <circle cx={sw2}  cy={0} r={5} fill="#fff" stroke={accentColor} strokeWidth={1.5} opacity={isDimmed ? 0.15 : 0.7} />
+              </g>{/* /fm-sat-appear */}
               </g>
             )
           })}
@@ -1443,15 +1754,15 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
                   ))}
                 </g>
 
-                {/* Flow position badge */}
-                {flowPositions && flowPositions.length > 0 && (
-                  <g transform={`translate(${hw2 - 13}, ${-hh2 + 13})`}>
-                    <circle r={13} fill={FLOW_COLOR} stroke="#fff" strokeWidth={2} />
-                    <text textAnchor="middle" dominantBaseline="central" fontSize="10" fontWeight={700} fill="#fff" style={{ userSelect: 'none', pointerEvents: 'none', fontFamily: DM }}>
-                      {flowPositions.join(',')}
+                {/* Flow position badges — one circle per occurrence */}
+                {flowPositions && flowPositions.map((pos, i) => (
+                  <g key={i} transform={`translate(${hw2 - 11 - i * 24}, ${-hh2 + 11})`}>
+                    <circle r={11} fill={FLOW_COLOR} stroke="#fff" strokeWidth={2} />
+                    <text textAnchor="middle" dominantBaseline="central" fontSize="9" fontWeight={700} fill="#fff" style={{ userSelect: 'none', pointerEvents: 'none', fontFamily: DM }}>
+                      {pos}
                     </text>
                   </g>
-                )}
+                ))}
                 {/* Category affinity badge */}
                 {categoryFilter && affinity > 0 && !flowPositions && (
                   <g transform={`translate(${hw2 - 20}, ${hh2 - 13})`}>
@@ -1461,16 +1772,6 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
                     </text>
                   </g>
                 )}
-                {/* Hub badge — identifies this as a hub node */}
-                <g transform={`translate(${-hw2 + 24}, ${-hh2 + 14})`} opacity={isDimmed ? 0.18 : 1} style={{ pointerEvents: 'none' }}>
-                  <rect x={-20} y={-7} width={40} height={14} rx={7}
-                    fill="rgba(26,29,59,0.09)" stroke="rgba(26,29,59,0.18)" strokeWidth={0.8}
-                  />
-                  <text textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight={700}
-                    fill="rgba(26,29,59,0.55)"
-                    style={{ userSelect: 'none', fontFamily: DM }}
-                  >⬡ Hub</text>
-                </g>
                 {/* Category badge — left-edge stripe + label below hub card */}
                 {hubCat && (
                   <g style={{ pointerEvents: 'none' }}>
@@ -1502,6 +1803,101 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
       </svg>
 
       {tooltip && <VideoTooltip state={tooltip} onClose={() => setTooltip(null)} />}
+
+      {/* ─ Legend ── */}
+      {legendVisible ? (
+        <div style={{
+          position: 'absolute',
+          bottom: 68,
+          left: 16,
+          background: 'rgba(255,255,255,0.93)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(26,29,59,0.10)',
+          borderRadius: 10,
+          padding: '9px 13px 10px',
+          fontSize: 10,
+          lineHeight: 1.4,
+          color: 'rgba(26,29,59,0.65)',
+          zIndex: 10,
+          transition: 'left 0.3s',
+          boxShadow: '0 2px 14px rgba(26,29,59,0.08)',
+          fontFamily: "'Poppins', sans-serif",
+          minWidth: 178,
+        }}>
+          {/* Header row with hide button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(26,29,59,0.38)' }}>
+              Legenda
+            </div>
+            <button
+              onClick={() => setLegendVisible(false)}
+              title="Esconder legenda"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(26,29,59,0.35)', fontSize: 13, lineHeight: 1,
+                padding: '0 0 0 8px', display: 'flex', alignItems: 'center',
+              }}
+            >×</button>
+          </div>
+          {/* Edge rows */}
+          {([
+            { color: EDGE_OUT,   label: 'Saída  (hub → passo)' },
+            { color: EDGE_IN,    label: 'Entrada (passo → hub)' },
+            { color: FLOW_COLOR, label: 'Flow ativo' },
+          ] as const).map(({ color, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <svg width={36} height={10} style={{ flexShrink: 0 }}>
+                <line x1={2} y1={5} x2={24} y2={5} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+                <polygon points="22,2 34,5 22,8" fill={color} />
+              </svg>
+              <span>{label}</span>
+            </div>
+          ))}
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(26,29,59,0.07)', margin: '5px 0' }} />
+          {/* Badge rows */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ width: 4, height: 18, borderRadius: 2, background: '#3B82F6', opacity: 0.72, flexShrink: 0 }} />
+            <span>Categoria do passo</span>
+          </div>
+           
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              padding: '1px 6px', borderRadius: 7, fontSize: 8, fontWeight: 700,
+              background: '#6d28d9', color: '#fff', flexShrink: 0, whiteSpace: 'nowrap',
+            }}>★ cat</div>
+            <span>Conectado a toda a categoria</span>
+          </div>
+        </div>
+      ) : (
+        /* Collapsed pill — click to restore */
+        <button
+          onClick={() => setLegendVisible(true)}
+          title="Mostrar legenda"
+          style={{
+            position: 'absolute',
+            bottom: 68,
+            left: sidebarOpen ? sidebarWidth + 16 : 16,
+            background: 'rgba(255,255,255,0.93)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(26,29,59,0.10)',
+            borderRadius: 8,
+            padding: '5px 11px',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: 'rgba(26,29,59,0.45)',
+            cursor: 'pointer',
+            zIndex: 10,
+            transition: 'left 0.3s',
+            boxShadow: '0 2px 10px rgba(26,29,59,0.07)',
+            fontFamily: "'Poppins', sans-serif",
+          }}
+        >
+          Legenda
+        </button>
+      )}
 
       <div className="fm-hint" style={{ left: `calc(50% - ${panelWidth / 2}px)` }}>
         {builderMode ? 'Clique nos nós para montar a sequência' : 'Arraste nós · Scroll zoom · Clique para detalhes'}
@@ -1579,33 +1975,19 @@ export function FlowMapGraph({ hubs, steps, flows, styleId }: FlowMapGraphProps)
         </div>
       )}
 
-      {/* Flow sequence footer — visible when a flow is selected */}
-      {selectedFlow && !builderMode && (
-        <FlowSequenceFooter
-          flow={selectedFlow}
-          steps={steps}
-          hubs={hubs}
-          onStepClick={(stepId) => {
-            setSelectedStepId(stepId)
-            const pos = positions[stepId]
-            if (pos) {
-              setTransform((t) => ({
-                ...t,
-                x: -pos.x * t.scale,
-                y: -pos.y * t.scale,
-              }))
-            }
-          }}
-          onClose={() => setSelectedFlowId(null)}
-          onUpdateFlow={(updated) => {
-            if (updated.id.startsWith('custom-')) {
-              const next = customFlows.map((f) => f.id === updated.id ? updated : f)
-              setCustomFlows(next)
-              saveCustomFlows(styleId, next)
-            }
-          }}
-        />
+      {/* Footer edit mode hint */}
+      {footerEditing && (
+        <div style={{
+          position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(245,166,35,0.92)', backdropFilter: 'blur(6px)',
+          color: '#fff', borderRadius: '20px', padding: '6px 16px',
+          fontFamily: DM, fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em',
+          textTransform: 'uppercase', zIndex: 200, pointerEvents: 'none',
+        }}>
+          ✎ Clique nos nós para adicionar ao flow
+        </div>
       )}
+
       </div>
     </div>
   )

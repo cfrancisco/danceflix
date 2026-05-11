@@ -1,4 +1,6 @@
-import type { DanceStyle, DanceStep } from '../types'
+import type { DanceStyle, DanceStep, Video } from '../types'
+
+export type { Video }
 import { ZoukStyle } from './styles/zouk'
 import { BachataStyle } from './styles/bachata'
 import { SambaStyle } from './styles/samba'
@@ -28,18 +30,32 @@ export function getStyleById(id: string): DanceStyle | undefined {
 /** Flat list of all steps across every registered style. */
 export const steps: DanceStep[] = registeredStyles.flatMap((s) => s.steps)
 
-/** Backward-compat alias */
-export const videos = steps
+/** Flat list of all catalog videos across every registered style. */
+const catalog: Video[] = registeredStyles.flatMap((s) => s.videos)
 
-export function getVideoById(id: string): DanceStep | undefined {
+export function getAllVideos(): Video[] {
+  return catalog
+}
+
+export function getCatalogVideoById(id: string): Video | undefined {
+  return catalog.find((v) => v.id === id)
+}
+
+/** Lookup a step by its ID. */
+export function getStepById(id: string): DanceStep | undefined {
   return steps.find((s) => s.id === id)
+}
+
+/** @deprecated Use getStepById — this returns a DanceStep, not a Video. */
+export function getVideoById(id: string): DanceStep | undefined {
+  return getStepById(id)
 }
 
 /**
  * Returns up to `limit` related steps from the same style, scored by:
  *  +3 — same category
  *  +1 — each shared tag
- * The current step is excluded. Ties broken by date (newest first).
+ * The current step is excluded. Ties broken by name alphabetically.
  */
 export function getRelatedVideos(step: DanceStep, limit = 4): DanceStep[] {
   const pool = step.styleId
@@ -58,9 +74,26 @@ export function getRelatedVideos(step: DanceStep, limit = 4): DanceStep[] {
     .map((item) => item.step)
 }
 
+/** Resolves a step's videoIds to full Video objects from the catalog. */
+export function getEffectiveVideos(step: DanceStep): Video[] {
+  return step.videoIds
+    .map((id) => getCatalogVideoById(id))
+    .filter((v): v is Video => v !== undefined)
+}
+
+/** Returns the YouTube ID of the first catalog video for this step, if any. */
+export function getFirstYoutubeId(step: DanceStep): string | undefined {
+  return getEffectiveVideos(step).find((v) => v.youtubeId)?.youtubeId
+}
+
+/** True if the step has at least one catalog video with a YouTube ID. */
+export function hasYoutubeVideo(step: DanceStep): boolean {
+  return !!getFirstYoutubeId(step)
+}
+
 export function getVideoThumbnail(step: DanceStep): string {
   if (step.thumbnail) return step.thumbnail
-  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  const firstYT = getFirstYoutubeId(step)
   if (firstYT) {
     return `https://img.youtube.com/vi/${firstYT}/hqdefault.jpg`
   }

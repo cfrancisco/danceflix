@@ -8,9 +8,8 @@ Hosted via GitHub Pages (`npm run deploy`).
 
 ## Working Mode
 
-**Always enter plan mode before implementing any changes.** Before writing or editing code, think through the approach, list the affected files, and confirm the plan with the user. Only start coding after the plan is agreed upon.
-- 
-You don't need check in the preview mode if everything is correct, just provide the code. The user will check and ask for changes if needed. 
+- Don't use PowerShell or any terminal with weird encoding issues — stick to VSCode integrated terminal or Git Bash.
+- You don't need check in the preview mode if everything is correct, just provide the code. The user will check and ask for changes if needed. 
 
 ---
 

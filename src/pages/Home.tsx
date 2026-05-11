@@ -6,6 +6,7 @@ import { AnimatedSection } from '../components/AnimatedSection'
 import { StepTable } from '../components/StepTable'
 import type { StepSortCol } from '../components/StepTable'
 import { useActiveStyle } from '../context/StyleContext'
+import { hasYoutubeVideo, getFirstYoutubeId } from '../data/videos'
 import type { DanceStep } from '../types'
 import './Home.css'
 
@@ -58,7 +59,7 @@ export function Home() {
 
   const [highlights, setHighlights] = useState<DanceStep[]>([])
   useEffect(() => {
-    const withYoutube = styleSteps.filter((s) => s.youtubeVideos.some((id) => id !== ''))
+    const withYoutube = styleSteps.filter((s) => hasYoutubeVideo(s))
     const pool = withYoutube.length >= 5 ? withYoutube : styleSteps
     const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, 5)
     setHighlights(shuffled)
@@ -111,7 +112,7 @@ export function Home() {
                   <span className="home-hero__title-steps">STEPS</span>
                 </h1>
                 <p className="home-hero__desc">
-                  Do básico às finalizações avançadas. Acompanhe seu progresso pessoal e domine cada passo.
+                  Passos do básico ao intermediario. Um dia chegamos aos passos avançados. 🌟  
                 </p>
                 <Link
                   to="/training"
@@ -240,7 +241,7 @@ export function Home() {
                   {filtered.length} passo{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="home-header__actions">
                 <ViewToggle view={view} setView={setView} accent={accent} />
                 <button onClick={() => navigate('/')} className="home-search__clear">
                   ← Limpar
@@ -258,7 +259,7 @@ export function Home() {
                     Nossa Biblioteca
                   </h2>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="home-header__actions home-header__actions--wide">
                   <ViewToggle view={view} setView={setView} accent={accent} />
                   <Link to="/training" className="home-library__link">
                     Fila de treino →
@@ -346,7 +347,7 @@ export function Home() {
             </h2>
             <div className="home-footer__meta">
               <p className="home-footer__desc">
-                Biblioteca pessoal de Zouk
+                Biblioteca pessoal de passos do Cabelo.
               </p>
               <Link
                 to="/training"
@@ -365,8 +366,6 @@ export function Home() {
   )
 }
 
-const P = "'Poppins', sans-serif"
-
 function ViewToggle({
   view,
   setView,
@@ -381,26 +380,19 @@ function ViewToggle({
     { key: 'lista' as const, label: '☰ Lista'  },
   ]
   return (
-    <div style={{ display: 'flex', gap: '6px' }}>
+    <div className="home-view-toggle">
       {options.map(({ key, label }) => {
         const active = view === key
         return (
           <button
             key={key}
             onClick={() => setView(key)}
-            style={{
-              fontFamily: P,
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              padding: '7px 14px',
-              borderRadius: '50px',
-              border: `1.5px solid ${active ? accent : '#dde3f5'}`,
-              background: active ? `${accent}1a` : '#ffffff',
-              color: active ? accent : '#4a4e6b',
-              cursor: 'pointer',
-              transition: 'all 0.18s',
-            }}
+            className="home-view-toggle__btn"
+            style={active ? {
+              borderColor: accent,
+              background: `${accent}1a`,
+              color: accent,
+            } : undefined}
           >
             {label}
           </button>
@@ -412,7 +404,7 @@ function ViewToggle({
 
 function FeaturedThumb({ step }: { step: DanceStep | undefined }) {
   if (!step) return <div className="home-thumb__empty" />
-  const firstYT = step.youtubeVideos.find((id) => id !== '')
+  const firstYT = getFirstYoutubeId(step)
   if (firstYT) {
     return (
       <img

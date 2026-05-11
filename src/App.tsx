@@ -7,6 +7,7 @@ import { Home } from './pages/Home'
 import { VideoDetail } from './pages/VideoDetail'
 import { TrainingQueue } from './pages/TrainingQueue'
 import { FlowMap } from './pages/FlowMap'
+import { VideoLibrary } from './pages/VideoLibrary'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -24,6 +25,7 @@ function AnimatedRoutes() {
           <Route path="/video/:id" element={<VideoDetail />} />
           <Route path="/training" element={<TrainingQueue />} />
           <Route path="/flow-map" element={<FlowMap />} />
+          <Route path="/videos" element={<VideoLibrary />} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -34,7 +36,7 @@ function App() {
   return (
     <HashRouter>
       <StyleProvider>
-        <div className="min-h-screen" style={{ background: '#eef2ff', color: '#1a1d3b' }}>
+        <div className="min-h-screen app-root">
           <Navbar />
           <StyleSelector />
           <AnimatedRoutes />
