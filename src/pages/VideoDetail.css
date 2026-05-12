@@ -1086,3 +1086,73 @@
   border-color: rgba(109,40,217,0.3);
   color: #6d28d9;
 }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .vd-main {
+    padding: 20px 16px 60px;
+  }
+
+  /* Timestamp edit panel — stack fields vertically */
+  .vd-ts-fields {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vd-ts-field {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .vd-ts-capture-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Segment display bar */
+  .vd-segment-bar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .vd-segment-controls {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Timestamp edit actions */
+  .vd-ts-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .vd-ts-btn {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Edit form rows stack vertically */
+  .vd-editform__row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Video panel — linked videos list */
+  .vd-vidpanel__field-row {
+    flex-direction: column;
+  }
+
+  /* Training panel levels */
+  .tp-levels__btn {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  /* Source pills — smaller */
+  .vd-source-btn {
+    padding: 5px 12px;
+    font-size: 10px;
+  }
+}

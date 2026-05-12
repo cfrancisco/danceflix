@@ -333,3 +333,73 @@
   text-align: right;
   margin-top: 3px;
 }
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .tq-header {
+    padding: 36px 0 44px;
+  }
+
+  .tq-main {
+    padding: 32px 16px 80px;
+  }
+
+  .tq-filters {
+    padding: 16px;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .tq-stats {
+    gap: 8px;
+  }
+
+  .tq-stats__card {
+    padding: 12px 8px;
+  }
+
+  .tq-stats__value {
+    font-size: 22px;
+  }
+
+  .tq-stats__label {
+    font-size: 9px;
+  }
+
+  .tq-row {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .tq-row__rank {
+    display: none;
+  }
+
+  .tq-row__thumb {
+    width: 56px;
+    height: 34px;
+  }
+
+  .tq-row__thumb-placeholder {
+    width: 56px;
+    height: 34px;
+  }
+
+  .tq-row__name {
+    font-size: 13px;
+  }
+
+  .tq-row__score-badge {
+    min-width: 44px;
+    padding: 5px 8px;
+  }
+
+  .tq-row__score-value {
+    font-size: 16px;
+  }
+
+  .tq-row__score-label {
+    display: none;
+  }
+}

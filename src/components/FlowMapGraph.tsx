@@ -508,7 +508,7 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null)
   const [showVideoPicker, setShowVideoPicker] = useState(false)
   const [videoSearch, setVideoSearch] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 640)
   const [sidebarView, setSidebarView] = useState<'list' | 'detail' | 'edit'>('list')
   const [sidebarDir, setSidebarDir] = useState<1 | -1>(1)
 
@@ -766,6 +766,14 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
   const incoming = selectedStepId ? connections.filter((c) => c.to === selectedStepId) : []
 
   const [isDragging, setIsDragging] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640)
+  const lastPinchDist = useRef<number | null>(null)
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth <= 640)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
 
   const onMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if ((e.target as Element).closest('.graph-node')) return
@@ -803,6 +811,47 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
       ...t,
       scale: Math.max(0.2, Math.min(3.5, t.scale * factor)),
     }))
+  }, [])
+
+  const onTouchStart = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 1) {
+      if ((e.target as Element).closest('.graph-node')) return
+      dragging.current = true
+      setIsDragging(true)
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      lastPinchDist.current = null
+    } else if (e.touches.length === 2) {
+      dragging.current = false
+      setIsDragging(false)
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      lastPinchDist.current = Math.sqrt(dx * dx + dy * dy)
+    }
+  }, [])
+
+  const onTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 1 && dragging.current) {
+      const dx = e.touches[0].clientX - lastPos.current.x
+      const dy = e.touches[0].clientY - lastPos.current.y
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }))
+    } else if (e.touches.length === 2 && lastPinchDist.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const factor = dist / lastPinchDist.current
+      lastPinchDist.current = dist
+      setTransform((t) => ({
+        ...t,
+        scale: Math.max(0.2, Math.min(3.5, t.scale * factor)),
+      }))
+    }
+  }, [])
+
+  const onTouchEnd = useCallback(() => {
+    dragging.current = false
+    setIsDragging(false)
+    lastPinchDist.current = null
   }, [])
 
   const panelWidth = selectedStep ? 300 : 0
@@ -940,17 +989,26 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
     pinTooltip(stepId, e)
   }, [builderMode, footerEditing, addToDraft, pinTooltip])
 
-  const sidebarWidth = !builderMode && sidebarView === 'edit' ? 572 : 260
+  const sidebarWidth = isMobile
+    ? Math.min(window.innerWidth - 8, 340)
+    : (!builderMode && sidebarView === 'edit' ? 572 : 260)
 
   return (
     <div ref={containerRef} className="fm-graph" style={{ display: 'flex', height: '100%' }}>
       {/* ─ Sidebar toggle button ── */}
       <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
+        onClick={() => {
+          if (sidebarOpen) {
+            setSidebarView('list')
+            setSelectedFlowId(null)
+            setBuilderMode(false)
+          }
+          setSidebarOpen(!sidebarOpen)
+        }}
         style={{
           position: 'absolute',
           top: '16px',
-          left: sidebarOpen ? `${sidebarWidth + 16}px` : '16px',
+          left: isMobile ? '16px' : (sidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
           width: '32px',
           height: '32px',
           background: 'rgba(255,255,255,0.95)',
@@ -971,13 +1029,21 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
         {sidebarOpen ? '←' : '→'}
       </button>
 
+      {/* ─ Mobile backdrop — tap to close sidebar ── */}
+      {isMobile && sidebarOpen && (
+        <div
+          style={{ position: 'absolute', inset: 0, zIndex: 49, background: 'rgba(0,0,0,0.28)' }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ─ Left sidebar ── */}
       {sidebarOpen && (
         <div className="fm-sidebar" style={{ width: sidebarWidth, transition: 'width 0.18s ease' }}>
           <AnimatePresence initial={false} mode="wait" custom={sidebarDir}>
 
             {/* ── LIST page ── */}
-            {!builderMode && sidebarView === 'list' && (
+            {!builderMode && (sidebarView === 'list' || !selectedFlow) && (
               <motion.div key="list" className="fm-sidebar__page"
                 custom={sidebarDir}
                 variants={{ enter: (d) => ({ x: d * 28, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d * -28, opacity: 0 }) }}
@@ -1280,6 +1346,10 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
           onWheel={onWheel}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
           onClick={(e) => {
             if (!(e.target as Element).closest('.graph-node')) {
               setSelectedStepId(null)
@@ -1900,7 +1970,12 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
       )}
 
       <div className="fm-hint" style={{ left: `calc(50% - ${panelWidth / 2}px)` }}>
-        {builderMode ? 'Clique nos nós para montar a sequência' : 'Arraste nós · Scroll zoom · Clique para detalhes'}
+        {builderMode
+          ? 'Clique nos nós para montar a sequência'
+          : isMobile
+            ? 'Arraste · Pinça para zoom · Toque para detalhes'
+            : 'Arraste nós · Scroll zoom · Clique para detalhes'
+        }
       </div>
 
       <div className="fm-zoom" style={{ right: panelWidth + 16, position: 'absolute' }}>
@@ -1976,7 +2051,7 @@ export function FlowMapGraph({ hubs, steps, flows, styleId, onAddStep }: FlowMap
       )}
 
       {/* Footer edit mode hint */}
-      {footerEditing && (
+      {footerEditing && !isMobile && (
         <div style={{
           position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)',
           background: 'rgba(245,166,35,0.92)', backdropFilter: 'blur(6px)',

@@ -846,6 +846,51 @@
   margin-top: 8px;
 }
 
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* SVG: allow JS touch handlers to take over; no native scroll/zoom */
+  .fm-graph__svg {
+    touch-action: none;
+  }
+
+  /* Sidebar becomes an overlay instead of taking horizontal space */
+  .fm-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    background: rgba(240, 244, 255, 0.97);
+    backdrop-filter: blur(14px);
+    box-shadow: 4px 0 24px rgba(26, 29, 59, 0.18);
+  }
+
+  /* Details panel becomes a bottom sheet */
+  .fm-panel {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid #dde3f5;
+    z-index: 20;
+    overflow-y: auto;
+  }
+
+  /* Keep hint centred regardless of panel */
+  .fm-hint {
+    left: 50% !important;
+  }
+
+  /* Keep zoom controls away from right edge (panel no longer uses horizontal space) */
+  .fm-zoom {
+    right: 16px !important;
+  }
+}
+
 /* ── Cluster / satellite appear animation ───────────────────────────────── */
 @keyframes fm-sat-appear {
   from { opacity: 0; transform: scale(0.6); }

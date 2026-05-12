@@ -7,48 +7,49 @@ Minha biblioteca pessoal de passos de dança, com vídeos, sistema de treino e m
 ## Features
 
 ### Estilos de dança
-- **Multi-estilo** — Zouk, Bachata e Samba, cada um com identidade visual própria.
+- **Multi-estilo** — Zouk, Bachata e Samba, cada um com identidade visual própria
 - **Seletor de estilo** — barra de tabs sticky abaixo da navbar para trocar de estilo a qualquer momento; preferência salva no `localStorage`
 - Arquitetura preparada para adicionar novos estilos sem tocar nos componentes existentes
 
 ### Biblioteca de passos
-- Gerenciamento dos passos em uma interface dedicada.
-- Filtro por título, descrição, tags e categoria.
-- **Passos organizados por categoria** — Como "Abertura",
-"Base e Deslocamento", "Conexões e Estilizações", "Giros e Dinâmicas", "Finalizações", etc.
-- Cada passo tem título, descrição, tags e vídeos associados.
-- Os videos relacionados aos passos podem ser adicionados, editados e removidos na interface da Biblioteca.
+- Filtro por título, descrição, tags e categoria; alternância entre view grade e lista tabular com ordenação por coluna
+- **Passos organizados por categoria** — "Abertura", "Base e Deslocamento", "Conexões e Estilizações", "Giros e Dinâmicas", "Finalizações", etc.
+- Cada passo tem título, descrição, tags, detalhes técnicos, dificuldade e duração
+- **Edição inline de passos** — qualquer passo do catálogo pode ser editado (nome, descrição, categoria, dificuldade, tags, detalhes técnicos); alterações salvas em `localStorage` e exportáveis como JSON
 
 ### Biblioteca de vídeos
-- **Vídeos do YouTube e locais** — cada passo suporta embed do YouTube ou arquivo de vídeo local (`.mp4`)
+- **Vídeos do YouTube e locais** — suporte a URLs normais, `youtu.be`, `embed/` e Shorts (`shorts/`), além de ficheiros locais `.mp4`
 - **Múltiplas fontes por passo** — um mesmo passo pode ter várias gravações (câmera frontal, slow-motion, ângulo diferente), com seletor de tabs no player
-- Filtro por título, descrição e tags.
-- Gerenciamento dos videos em uma interface dedicada.
+- **Segmentos com timestamp** — início e fim configuráveis por fonte; botão de captura do tempo atual do player; sobreposições persistidas em `localStorage` separadamente da base de dados
+- **Relação muitos-para-muitos** — um passo pode aparecer em vários vídeos e um vídeo pode conter vários passos, cada um com o seu próprio segmento
+- **CRUD completo de vídeos** — criação, edição, vinculação a passos e exclusão; vídeos do catálogo e da biblioteca pessoal têm as mesmas ações
+- **Hold-to-delete** — exclusão via pressão prolongada (1,5 s) com animação de preenchimento, sem diálogo de confirmação
+- **Exportação de overrides** — botões para exportar `steps.json` e `videos.json` prontos para substituir na base de dados, com badge de contagem de alterações pendentes
+- **Importação e exportação de backup** — todos os dados do `localStorage` exportáveis e importáveis como JSON
 
 ### Vídeo do dia
-- Seção hero com 5 vídeos em destaque sortidos a cada visita
+- Seção hero com 5 vídeos em destaque sorteados a cada visita
 - Prioriza vídeos que têm ID do YouTube (garante thumbnail real; nunca mostra placeholder cinza)
-- Fallback automático para o catálogo completo quando o estilo ainda tem poucos vídeos com YouTube
+- Fallback automático para o catálogo completo quando o estilo tem poucos vídeos com YouTube
 
 ### Sistema de treino
 - Score de 0 a 5 por passo (Não praticado → Dominado)
-- Progresso individual: score, contagem de revisões, data da última revisão, notas livres
+- Progresso individual: score, contagem de revisões, data da última revisão
 - **Fila de treino** — lista completa ordenável por score, nome, data ou "nunca revisado"; filtrável por categoria e por status (precisa treinar / no caminho)
 - Estado persistido em `localStorage` (sem necessidade de backend)
 
 ### Mapa mental (FlowMap)
-- **View lista** — cards de hubs com dificuldade, vídeos vinculados e conexões
-- **View rede** — grafo SVG interativo com layout radial; nós de passo orbitam ao redor do hub em fan
-- Arestas com curva de Bézier; tooltip ao hover com nome do vídeo e link direto
-- Layout fixo para Zouk; layout circular dinâmico gerado automaticamente para estilos novos
-- Fluxos comuns pré-definidos por estilo (sequências típicas de passos).
+- **View rede** — grafo SVG interativo com layout radial; nós de passo orbitam ao redor do hub em fan; arestas com curva de Bézier
+- **View lista** — cards de hubs com dificuldade, vídeos vinculados e conexões; tooltip de preview de vídeo ao hover nos passos do fluxo, com pin para manter aberto e dar play sem sair da página
+- Layout fixo para Zouk; layout circular dinâmico gerado automaticamente para novos estilos
+- **Sidebar de detalhe e edição** — ao clicar num fluxo na listagem, abre as informações no próprio sidebar com navegação back/edit, sem poluir a área do grafo
 
-## Criação de Fluxos
-- Interface de criação de fluxos a partir do mapa mental
-- Arrastar e soltar passos para criar um fluxo personalizado.
-- Fluxos salvos localmente e compartilháveis via URL (query string com IDs dos passos)
-- Marcação de tempo de onde o passo é feito no video, para facilitar a revisão e o play direto do passo no vídeo.
-- Fluxos pré-definidos para cada estilo, com os passos mais comuns.
+### Criação e gestão de fluxos
+- Arrastar e soltar passos no sidebar para construir um fluxo personalizado
+- Reordenação dinâmica dos passos dentro do fluxo
+- **Vídeo do fluxo** — campo para vincular um vídeo (YouTube ou local) ao fluxo, com busca nos vídeos já cadastrados; cada passo do fluxo pode ter timestamps de início e fim dentro desse vídeo
+- **Todos os fluxos editáveis e deletáveis** — fluxos do catálogo e personalizados têm as mesmas ações de edição e exclusão
+- Fluxos pré-definidos por estilo com os passos mais comuns
 
 
 # Informações do Projeto

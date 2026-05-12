@@ -1112,6 +1112,21 @@
   white-space: nowrap;
 }
 
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .fsf__edit-stats {
+    display: none;
+  }
+
+  .fsf__edit-actions {
+    justify-content: flex-end;
+    margin-left: -16px;
+    margin-right: -21px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
 /* Video badge in bar */
 .fsf__bar-video-badge {
   font-family: 'Poppins', sans-serif;

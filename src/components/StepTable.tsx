@@ -35,11 +35,11 @@ const CAT_COLOR: Record<string, string> = {
   'Finalizações':                  '#00e676',
 }
 
-const COLS: { key: StepSortCol; label: string }[] = [
+const COLS: { key: StepSortCol; label: string; mobileHidden?: boolean }[] = [
   { key: 'name',       label: 'Nome'        },
-  { key: 'category',   label: 'Categoria'   },
+  { key: 'category',   label: 'Categoria',   mobileHidden: true },
   { key: 'difficulty', label: 'Dificuldade' },
-  { key: 'duration',   label: 'Duração'     },
+  { key: 'duration',   label: 'Duração',     mobileHidden: true },
 ]
 
 
@@ -98,12 +98,12 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
         <thead>
           <tr>
             <th className="step-table__th step-table__th--thumb" />
-            {COLS.map(({ key, label }) => {
+            {COLS.map(({ key, label, mobileHidden }) => {
               const active = sortBy === key
               return (
                 <th
                   key={key}
-                  className="step-table__th"
+                  className={`step-table__th${mobileHidden ? ' step-table__col--mobile-hidden' : ''}`}
                   onClick={() => onSort(key)}
                   style={{ color: active ? accentColor : undefined }}
                 >
@@ -156,7 +156,7 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
                 </td>
 
                 {/* Category */}
-                <td className="step-table__td">
+                <td className="step-table__td step-table__col--mobile-hidden">
                   <span
                     className="step-table__cat-badge"
                     style={{ color: catColor, borderColor: catColor, background: `${catColor}18` }}
@@ -169,12 +169,12 @@ export function StepTable({ steps, sortBy, sortDir, onSort, accentColor = '#f5a6
                 <td className="step-table__td">
                   <div className="step-table__level">
                     <span className="step-table__level-dot" style={{ background: level.dot }} />
-                    <span>{level.label}</span>
+                    <span className="step-table__level-label">{level.label}</span>
                   </div>
                 </td>
 
                 {/* Duration */}
-                <td className="step-table__td step-table__td--duration">
+                <td className="step-table__td step-table__td--duration step-table__col--mobile-hidden">
                   {step.duration ?? '—'}
                 </td>
               </tr>

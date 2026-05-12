@@ -90,11 +90,12 @@ export function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="nav-mobile md:hidden">
-          <div className="page-wrap py-4 flex flex-col gap-4">
+          <div className="page-wrap py-2 flex flex-col">
             {[
-              { to: '/',         label: 'Biblioteca'               },
-              { to: '/training', label: 'Treino'                   },
-              { to: '/flow-map', label: 'Conexões entre Passos'    },
+              { to: '/',         label: 'Biblioteca'            },
+              { to: '/training', label: 'Treino'                },
+              { to: '/flow-map', label: 'Conexões entre Passos' },
+              { to: '/videos',   label: 'Vídeos'                },
             ].map(({ to, label }) => (
               <Link
                 key={to}
@@ -105,16 +106,6 @@ export function Navbar() {
                 {label}
               </Link>
             ))}
-            <form onSubmit={handleSearch} className="nav-mobile__search flex items-center gap-2 pt-2">
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar passos…"
-                className="nav-mobile__search-input flex-1 bg-transparent focus:outline-none"
-              />
-              <button type="submit" className="nav-mobile__submit">→</button>
-            </form>
           </div>
         </div>
       )}

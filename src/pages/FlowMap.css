@@ -512,3 +512,58 @@
   border-color: var(--c-amber);
   color: var(--c-amber-dark);
 }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .fmap-header {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fmap-header__title {
+    font-size: 26px;
+  }
+
+  .fmap-header__stats {
+    font-size: 10px;
+  }
+
+  .fmap-header__toggle-wrap {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fm-io__btn {
+    padding: 5px 10px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+  }
+
+  .fmap-view-toggle__btn {
+    padding: 5px 14px;
+    font-size: 9px;
+  }
+
+  .fmap-lista {
+    padding: 28px 16px 80px;
+  }
+
+  .fmap-flows__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fmap-hubs-grid__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fmap-current {
+    padding: 16px;
+  }
+
+  .fmap-expanded {
+    padding: 16px;
+  }
+}

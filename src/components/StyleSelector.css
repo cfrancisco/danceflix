@@ -46,3 +46,9 @@
   font-size: 13px;
   line-height: 1;
 }
+
+@media (max-width: 640px) {
+  .ss-label {
+    display: none;
+  }
+}
